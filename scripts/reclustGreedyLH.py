@@ -131,24 +131,24 @@ def recluster(input_jet, save=False, delta_min= None, lam=None):
 
 
 
-def greedyLH(const_list, delta_min= None, lam=None):
+def greedyLH(content_level, delta_min= None, lam=None):
 	"""
 	Runs the dijMinPair function level by level starting from the list of constituents (leaves) until we reach the root of the tree.
 	Note: - We refer to both leaves and inner nodes as pseudojets.
 
 	Args:
-	  - const_list: jet constituents (i.e. the leaves of the tree)
+	  - content_level: jet constituents (i.e. the leaves of the tree)
 	  - alpha: defines the clustering algorithm. alpha={-1,0,1} defines the {anti-kt, CA and kt} algorithms respectively.
 
 	Returns:
 	  Note:
-	     Const_list: nodes list after deleting the constituents that are merged and adding the new pseudojet in each level.
+	     content_level: nodes list after deleting the constituents that are merged and adding the new pseudojet in each level.
 	      So this should only have the root of the tree at the end.
 
 	  - tree_dic: dictionary that has the node id of a parent as a key and a list with the id of the 2 children as the values
 	  - idx: array that stores the node id
 	   (the node id determines the location of the momentum vector of a pseudojet in the jet_content array)
-	    of the pseudojets that are in the current const_list array. It has the same elements as the const_list (they get updated
+	    of the pseudojets that are in the current content_level array. It has the same elements as the content_level (they get updated
 	    level by level).
 	  - jet_content: array with the momentum of all the nodes of the jet tree (both leaves and inners).
 	  - root_node: root node id
@@ -157,7 +157,7 @@ def greedyLH(const_list, delta_min= None, lam=None):
 	  - linkage_list: linkage list to build heat clustermap visualizations.
 	"""
 
-	Nconst = len(const_list)
+	Nconst = len(content_level)
 
 	root_node = 2 * Nconst - 2
 	logger.debug(f"Root node = (N constituents + N parent) = {root_node}")
@@ -174,12 +174,12 @@ def greedyLH(const_list, delta_min= None, lam=None):
 	logLH=[]
 	# dij_hist = []
 	tree_dic = {}
-	const_list = np.asarray(const_list)
-	jet_content = const_list
+	content_level = np.asarray(content_level)
+	jet_content = content_level
 	deltas_level = np.zeros(Nconst)
 
-	for j in range(len(const_list) - 1):
-		const_list, \
+	for j in range(len(content_level) - 1):
+		content_level, \
 		deltas_level, \
 		logLH, \
 		tree_dic, \
@@ -187,7 +187,7 @@ def greedyLH(const_list, delta_min= None, lam=None):
 		jet_content, \
 		N_leaves_list, \
 		linkage_list = logLHMaxPair(
-			const_list,
+			content_level,
 			deltas_level,
 			logLH,
 			tree_dic,
@@ -209,7 +209,7 @@ def greedyLH(const_list, delta_min= None, lam=None):
 
 
 def logLHMaxPair(
-    const_list,
+    content_level,
 	deltas_level,
     logLH,
     tree_dic,
@@ -229,15 +229,16 @@ def logLHMaxPair(
 	(We refer to both leaves and inner nodes as pseudojets.)
 
 	Args:
-	    - const_list: array with the constituents momentum list for the current level (i.e. deleting the constituents that are merged and
+	    - content_level: array with the constituents momentum list for the current level (i.e. deleting the constituents that are merged and
 	      adding the new pseudojet from merging them)
-	    - var_dij_history: list with all the previous min{d_ij}
+	    - deltas_level
+	    - logLH: list with all the previous max log likelihood pairings.
 	    - tree_dic: dictionary that has the node id of a parent as a key and a list with the id of the 2 children as the values
 	    - jet_content: array with the momentum of all the nodes of the jet tree (both leaves and inners) after adding one
 	      more level in the clustering.
 	      We add a new node each time we cluster 2 pseudojets
 	    - idx: array that stores the node id (the node id determines the location of the momentum of a pseudojet in the jet_content array)
-	      of the pseudojets that are in the current const_list array. It has the same number of elements as the const_list (they get updated
+	      of the pseudojets that are in the current content_level array. It has the same number of elements as the content_level (they get updated
 	      level by level).
 	    - alpha: defines the clustering algorithm. alpha={-1,0,1} defines the {anti-kt, CA and kt} algorithms respectively.
 	    - Nconst: Number of leaves
@@ -248,7 +249,7 @@ def logLHMaxPair(
 	      Linkage list format: A  (n - 1) by 4 matrix Z is returned. At the i-th iteration, clusters with indices Z[i, 0] and Z[i, 1] are combined to form cluster (n + 1) . A cluster with an index less than n  corresponds to one of the n original observations. The distance between clusters Z[i, 0] and Z[i, 1] is given by Z[i, 2]. The fourth value Z[i, 3] represents the number of original observations in the newly formed cluster.
 
 	Returns:
-	    - new_list: new const_list after deleting the constituents that are merged and adding the new pseudojet in the current level.
+	    - new_list: new content_level after deleting the constituents that are merged and adding the new pseudojet in the current level.
 	    - var_dij_history
 	    - tree_dic
 	    - idx
@@ -259,23 +260,14 @@ def logLHMaxPair(
 	"""
 
 	# Get all possible pairings
-	pairs = np.asarray(list(itertools.combinations(np.arange(len(const_list)), 2)))
+	pairs = np.asarray(list(itertools.combinations(np.arange(len(content_level)), 2)))
 
-	# const_list_pt = np.absolute([element[0] for element in const_list])
-	# logger.debug(f"const_list_pt = {const_list_pt}")
 
-	# Get all logLH at current level and
+	# Get all logLH at current level
+	logLH_pairs = [(likelihood.split_logLH(content_level[pairs][k][0], deltas_level[pairs][k][0], content_level[pairs][k][1],
+	                       deltas_level[pairs][k][1], delta_min, lam), k) for k in range(len(content_level[pairs]))]
 
-	# print("const_list_pt[pairs][0] = ", const_list[pairs][0])
-	print("deltas_level[pairs][0][0] = ",deltas_level[pairs][0][0])
-
-	# logLH, p, delta_P, phi = likelihood.split_logLH(const_list[pairs][0][0], deltas_level[pairs][0][0], const_list[pairs][0][1], deltas_level[pairs][0][1], delta_min, lam)
-	# print("logLH, p, delta_P, phi = ",logLH, p, delta_P, phi)
-
-	logLH_pairs = [(likelihood.split_logLH(const_list[pairs][k][0], deltas_level[pairs][k][0], const_list[pairs][k][1],
-	                       deltas_level[pairs][k][1], delta_min, lam), k) for k in range(len(const_list[pairs]))]
-
-	print("logLH_pairs = ", logLH_pairs)
+	print("Sorted logLH_pairs = ", sorted(logLH_pairs, key=lambda x: x[0]))
 	print(" ")
 
 	# Get pair index (in pairs list) with max log likellihood
@@ -298,25 +290,25 @@ def logLHMaxPair(
 	linkage_list.append([idx[pairs[max_pair][0]], idx[pairs[max_pair][1]], np.absolute(max_tuple[0]), N_leaves_list[-1]])
 
 	logger.debug(f"------------------------------------------------------------")
-	logger.debug(f"const_list= {const_list}")
-	logger.debug(f"const_list[pairs[max_pair]]= {const_list[pairs[max_pair]]}")
-	logger.debug(f"np.sum(const_list[pairs[max_pair]],axis=0) = {np.sum(const_list[pairs[max_pair]],axis=0)}")
-	logger.debug(f"const_list[0] = {const_list[0]}")
+	logger.debug(f"content_level= {content_level}")
+	logger.debug(f"content_level[pairs[max_pair]]= {content_level[pairs[max_pair]]}")
+	logger.debug(f"np.sum(content_level[pairs[max_pair]],axis=0) = {np.sum(content_level[pairs[max_pair]],axis=0)}")
+	logger.debug(f"content_level[0] = {content_level[0]}")
 
 	# Update list of nodes momentum for the next level
-	print(" const_listbefore = ", const_list)
+	# print(" content_level = ", content_level)
 	new_list = np.reshape(
-	  np.append(np.delete(const_list, pairs[max_pair], 0), [np.sum(const_list[pairs[max_pair]], axis=0)]), (-1, 2))
+	  np.append(np.delete(content_level, pairs[max_pair], 0), [np.sum(content_level[pairs[max_pair]], axis=0)]), (-1, 2))
 	logger.debug(f"New list =  {new_list}")
-	print("const list after =",new_list)
+	# print("const list after =",new_list)
 
 	# Update list of Deltas for the next level
 	print("NewDeltas_level before = ", deltas_level)
-	NewDeltas_level = np.append(np.delete(deltas_level, pairs[max_pair], 0), [likelihood.get_delta_LR(const_list[pairs[max_pair]][0], const_list[pairs[max_pair]][1])])
+	NewDeltas_level = np.append(np.delete(deltas_level, pairs[max_pair], 0), [likelihood.get_delta_LR(content_level[pairs[max_pair]][0], content_level[pairs[max_pair]][1])])
 	logger.debug(f"NewDeltas_level list =  {NewDeltas_level}")
 	print("NewDeltas_level after = ", NewDeltas_level)
 
-	jet_content = np.concatenate((jet_content, [np.sum(const_list[pairs[max_pair]], axis=0)]), axis=0)
+	jet_content = np.concatenate((jet_content, [np.sum(content_level[pairs[max_pair]], axis=0)]), axis=0)
 
 	# Add a new key to the tree dictionary
 	tree_dic[Nconst + Nparent] = idx[pairs[max_pair]]
