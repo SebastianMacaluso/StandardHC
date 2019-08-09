@@ -122,6 +122,7 @@ def recluster(
 	jetsList = []
 	for path in bestLogLH_paths[-N_best::]:
 
+		print('len(jet_const) = ', len(jet_const))
 		# Build the reclustered tree
 		tree, \
 		content, \
