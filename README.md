@@ -67,7 +67,7 @@ Note that this is an early development version.
  ##### Fig. 2: Plot for the heat clustermap difference between the truth jet and the beam search (with beam size of 50) reclustered one. The closer the trees substructure is, the closer to cero the values in each entry. 
  <pre>
  
- <pre>
+ </pre>
 
 
 
