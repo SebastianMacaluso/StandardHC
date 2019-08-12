@@ -43,9 +43,9 @@ Note that this is an early development version.
  
  Next, we study and introduce new implementations to jets physics of the following clustering algorithms:
  
- - Greedy Likelihood: This algorithms clusters the jet constituents by choosing the node pairing that locally maximizes the likelihood at each level (See the [`notes`](https://github.com/SebastianMacaluso/ToyJetsShower/blob/master/notes/toyshower_v4.pdf) in [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower) for a description of how the likelihood of a splitting is defined).
+ - **Greedy Likelihood**: This algorithms clusters the jet constituents by choosing the node pairing that locally maximizes the likelihood at each level (See the [`notes`](https://github.com/SebastianMacaluso/ToyJetsShower/blob/master/notes/toyshower_v4.pdf) in [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower) for a description of how the likelihood of a splitting is defined).
  
- - Beam Search Likelihood : this is a beam search implementation to maximize the likelihood of the reclustered tree. The beam size is an input parameter. (Note that the Greedy Likelihood is a particular case of the Beam Search Likelihood for beam size of one.) 
+ - **Beam Search Likelihood** : this is a beam search implementation to maximize the likelihood of the reclustered tree. The beam size is an input parameter. (Note that the Greedy Likelihood is a particular case of the Beam Search Likelihood for beam size of one.) 
  
  
  
@@ -55,7 +55,17 @@ Note that this is an early development version.
 
  
  
+ ![Fig.1](plots/heatClustermap/figDiffTruthBeamSize50_singlepath_jet10.jpg)
  
+ ##### Fig. 1: 1D Tree-only visualization of the beam search (with beam size of 50) reclustered tree for a sample jet generated with the [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower) model. The horizontal ordering of the leaves corresponds to the order in which the leaves are accessed when traversing the tree.
+ 
+ <pre>
+ 
+ </pre>
+ ![Fig.2](plots/heatClustermap/figBeamSize50_jet10.png)
+ 
+ ##### Fig. 2: Plot for the heat clustermap difference between the truth jet and the beam search (with beam size of 50) reclustered one. The closer the trees substructure is, the closer to cero the values in each entry. 
+ <pre>
  
 
 
@@ -68,8 +78,8 @@ Note that this is an early development version.
     - [`beamSearch.py`](scripts/beamSearch.py): recluster a set of leaves with the beam search algorithm.
     - [`reclustGreedyLH.py`](scripts/reclustGreedyLH.py): recluster a set of leaves with the Greedy Likelihood algorithm.
     - [`reclusterTree.py`](scripts/reclusterTree.py): recluster a jet following the {Kt, CA, Antikt} clustering algorithms.
-    - [`Tree1D.py`](scripts/Tree1D.py):
-    - [`heatClustermap.py`](scripts/heatClustermap.py)
+    - [`Tree1D.py`](scripts/Tree1D.py): 1D tree-only visualizations.
+    - [`heatClustermap.py`](scripts/heatClustermap.py): 2D heat clustermap visualizations.
     - [`linkageList.py`](scripts/linkageList.py): build the linkage list necessary for the 2D heatclustermaps for the truth jet data.
 
 
