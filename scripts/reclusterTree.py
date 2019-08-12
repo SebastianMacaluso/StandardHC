@@ -440,6 +440,7 @@ def _traverse_rec(
         children = tree_dic[root]
         logger.debug(f"Children = {children}")
 
+
         L_idx = children[0]
         R_idx = children[1]
 

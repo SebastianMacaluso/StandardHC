@@ -401,9 +401,8 @@ def updateLevelPaths(
 		logLH = np.concatenate((logLH,[pairlogLH]))
 		logger.debug(f" logLH after appending pair log LH = {logLH}")
 
-
-		linkage_list = np.append(linkage_list,
-		                         [idx[pairs[MaxPairIdx][0]], idx[pairs[MaxPairIdx][1]], np.absolute(pairlogLH), N_leaves_list[-1]])
+		# linkage_list.append([idx[pairs[MaxPairIdx][0]], idx[pairs[MaxPairIdx][1]], np.absolute(pairlogLH), N_leaves_list[-1]])
+		linkage_list.append([idx[pairs[MaxPairIdx][0]], idx[pairs[MaxPairIdx][1]], Nparent, N_leaves_list[-1]])
 
 
 		# Update list of nodes momentum for the next level

@@ -5,6 +5,7 @@ import logging
 
 from scripts import linkageList
 from scripts import reclusterTree
+from scripts import beamSearch
 from scripts.utils import get_logger
 
 logger = get_logger(level=logging.INFO)
@@ -15,6 +16,9 @@ def heat_dendrogram(
 		truthJet = None,
 		recluster_jet1 = None,
 		recluster_jet2 = None,
+		beamSearch_jet = None,
+        beamSize = None,
+		N_best = None,
 		full_path = False,
 		FigName = None,
 ):
@@ -40,12 +44,24 @@ def heat_dendrogram(
 
 	# Build jet 1 heat data
 	else:
-		# Recluster jet using itself as an input. This way, we use the constituents (leaves) as ordered in this jet and the tree_ancestors list for this algorithm. (Their leaves idx goes from 0 to N leaves in order when using jet 1 both as rows and colums)
-		reclustjet = reclusterTree.recluster(recluster_jet1,
-		                                     alpha=int(recluster_jet1["algorithm"]),
-		                                     save=False)
 
-		ancestors = reclustjet["tree_ancestors"]
+		if beamSearch_jet:
+
+			reclustjet = beamSearch.recluster(beamSearch_jet,
+			                     delta_min=beamSearch_jet["pt_cut"],
+			                     lam=beamSearch_jet["Lambda"],
+			                     beamSize = beamSize,
+			                     N_best= N_best,
+			                     save=False)[0]
+			ancestors = reclustjet["tree_ancestors"]
+
+		if recluster_jet1:
+			# Recluster jet using itself as an input. This way, we use the constituents (leaves) as ordered in this jet and the tree_ancestors list for this algorithm. (Their leaves idx goes from 0 to N leaves in order when using jet 1 both as rows and colums)
+			reclustjet = reclusterTree.recluster(recluster_jet1,
+			                                     alpha=int(recluster_jet1["algorithm"]),
+			                                     save=False)
+
+			ancestors = reclustjet["tree_ancestors"]
 
 
 	# Number of nodes from root to leaf for each leaf
@@ -99,7 +115,7 @@ def heat_dendrogram(
 	# Build heat clustermap
 	if truthJet: # ruth jet heat data
 
-		if not recluster_jet1:
+		if not recluster_jet1 and not beamSearch_jet:
 
 			logger.info(f"truth heat data ----  alpha row: truth -- alpha column: truth")
 
@@ -116,7 +132,7 @@ def heat_dendrogram(
 
 			plt.show()
 
-		if recluster_jet1:
+		elif recluster_jet1:
 
 			logger.info(f"alpha row: {recluster_jet1['algorithm']} -- alpha column: truth")
 
@@ -133,6 +149,22 @@ def heat_dendrogram(
 
 			plt.show()
 
+		elif beamSearch_jet:
+
+			logger.info(f"alpha row: {beamSearch_jet['algorithm']} -- alpha column: truth")
+
+			sns.clustermap(
+				heat_data,
+				row_cluster=True,
+				col_cluster=True,
+				row_linkage=beamSearch_jet["linkage_list"],
+				col_linkage=truthJet["linkage_list"],
+			)
+
+			if FigName:
+				plt.savefig(str(FigName))
+
+			plt.show()
 
 	else: # jet 1 heat data
 

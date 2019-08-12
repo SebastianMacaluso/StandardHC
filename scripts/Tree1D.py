@@ -4,6 +4,7 @@ import logging
 
 from scripts import reclusterTree
 from scripts import reclustGreedyLH
+from scripts import beamSearch
 from scripts.utils import get_logger
 
 logger = get_logger(level=logging.INFO)
@@ -217,6 +218,8 @@ def visualizeTreePair(
 		figFormat ="pdf",
 		alpha_jet1 = None,
 		alpha_jet2 = None,
+		beamSize = None,
+		N_best = None,
 ):
 	'''
 	Call plotBinaryTree function to create a representation of the jet tree with graphviz Digraph.
@@ -261,9 +264,19 @@ def visualizeTreePair(
 			node_id = jetBottom["node_id"]
 
 		elif in_jet1["algorithm"] == "greedyLH":
-			jetTop = reclusterTree.recluster(in_jet1,
+
+			if in_jet2["algorithm"] == "beamSearch":
+				jetTop = beamSearch.recluster(in_jet1,
+				                            delta_min=in_jet2["pt_cut"],
+				                            lam=in_jet2["Lambda"],
+				                            beamSize = beamSize,
+				                            N_best=N_best,
+				                            save=False)[0]
+			else:
+				jetTop = reclusterTree.recluster(in_jet1,
 			                                    alpha=int(alpha_jet2),
 			                                    save=False)
+
 			jetBottom = reclustGreedyLH.recluster(in_jet1,
 			                            delta_min=in_jet1["pt_cut"],
 			                            lam=in_jet1["Lambda"],
@@ -277,15 +290,35 @@ def visualizeTreePair(
 			                            lam = in_jet2["Lambda"],
 			                            save=False)
 
-			jetBottom = reclusterTree.recluster(in_jet1,
+			if in_jet1["algorithm"] == "beamSearch":
+				jetBottom = beamSearch.recluster(in_jet1,
+				                            delta_min=in_jet1["pt_cut"],
+				                            lam=in_jet1["Lambda"],
+				                            beamSize = beamSize,
+				                            N_best=N_best,
+				                            save=False)[0]
+
+			else:
+				jetBottom = reclusterTree.recluster(in_jet1,
 			                                    alpha=int(alpha_jet1),
 			                                    save=False)
+
 			node_id = jetTop["node_id"]
 
 		else:
-			jetTop = reclusterTree.recluster(in_jet1,
+			if in_jet2["algorithm"] == "beamSearch":
+				jetTop = beamSearch.recluster(in_jet1,
+				                            delta_min=in_jet2["pt_cut"],
+				                            lam=in_jet2["Lambda"],
+				                            beamSize = beamSize,
+				                            N_best=N_best,
+				                            save=False)[0]
+
+			else:
+				jetTop = reclusterTree.recluster(in_jet1,
 			                                 alpha=int(alpha_jet2),
 			                                 save=False)
+
 			jetBottom = reclusterTree.recluster(in_jet1,
 			                                    alpha=int(alpha_jet1),
 			                                    save=False)
