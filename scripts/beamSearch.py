@@ -6,7 +6,6 @@ import itertools
 import copy
 
 from scripts import likelihood
-# from Queue import PriorityQueue
 
 from scripts.utils import get_logger
 
@@ -15,6 +14,29 @@ logger = get_logger(level=logging.INFO)
 
 
 class latentPath(object):
+	"""
+	Class that stores the jet dictionary information for each latent path included in the beam search algorithm:
+
+		- levelContent: nodes list after deleting the constituents that are merged and adding the new pseudojet in each level.
+	      So this should only have the root of the tree at the end.
+
+	    - levelDeltas: list with the delta value (for the splitting of a parent node) of each node. Zero if a leaf.
+
+	    - logLH: list with the log likelihood of each pairing.
+
+	    - jetContent: array with the momentum of all the nodes of the jet tree (both leaves and inners).
+
+		- tree_dic: dictionary that has the node id of a parent as a key and a list with the id of the 2 children as the values
+
+		- idx: array that stores the node id
+		(the node id determines the location of the momentum vector of a pseudojet in the jet_content array)
+		of the pseudojets that are in the current content_level array. It has the same elements as the content_level (they get updated
+		level by level).
+
+		- N_leaves_list: List that given a node idx, stores for that idx, the number of leaves for the branch below that node. It is initialized only with the tree leaves
+
+		- linkage_list: linkage list to build heat clustermap visualizations.
+	"""
 
 	def __init__(
 			self,
@@ -47,34 +69,44 @@ def recluster(
 		save = False,
 		delta_min = None,
 		lam = None,
-		 beamSize = None,
+		beamSize = None,
 		N_best = None,
 ):
 	"""
-	Uses helper functions to get the leaves of an  input jet, recluster them following some algorithm determined by the value of alpha,
-	create the new tree for the chosen algorithm, make a jet dictionary and save it.
+	Get the leaves of an  input jet,
+	recluster them following the beam search algorithm determined by the beam size,
+	create the new tree for the chosen algorithm,
+	make a jet dictionary list with all with the jets that give the best log likelihood up to N_best and save it.
 
 	Create a dictionary with all the jet tree info
-	- jet["root_id"]: root node id of the tree
-	- jet["content"]: list with the tree nodes (particles) momentum vectors. For the ToyJetsShower we consider a 2D model,
-	so we have (py,pz), with pz the direction of the beam axis
-	- jet["tree"]: list with the tree structure. Each entry contains a list with the [left,right] children of a node.
-	If [-1,-1] then the node is a leaf.
+		- jet["root_id"]: root node id of the tree
+		- jet["content"]: list with the tree nodes (particles) momentum vectors. For the ToyJetsShower we consider a 2D model,
+		so we have (py,pz), with pz the direction of the beam axis
+		- jet["tree"]: list with the tree structure. Each entry contains a list with the [left,right] children of a node.
+		If [-1,-1] then the node is a leaf.
 
 	New features added to the tree:
-	- jet["tree_ancestors"]: List with one entry for each leaf of the tree, where each entry lists all the ancestor node ids
-	when traversing the tree from the root to the leaf node.
-	- jet["linkage_list"]: linkage list to build heat clustermap visualizations.
-	- jet["Nconst"]: Number of leaves of the tree.
-	- jet["algorithm"]: Algorithm to generate the tree structure, e.g. truth, kt, antikt, CA.
+		- jet["tree_ancestors"]: List with one entry for each leaf of the tree, where each entry lists all the ancestor node ids
+		when traversing the tree from the root to the leaf node.
+		- jet["linkage_list"]: linkage list to build heat clustermap visualizations.
+		- jet["Nconst"]: Number of leaves of the tree.
+		- jet["algorithm"]: Algorithm to generate the tree structure, e.g. truth, kt, antikt, CA.
 
 	Args:
-	- input_jet: any jet dictionary with the clustering history.
-	- alpha: defines the clustering algorithm. alpha={-1,0,1} defines the {anti-kt, CA and kt} algorithms respectively.
-	- save: if true, save the reclustered jet dictionary
+		- input_jet: any jet dictionary with the clustering history.
+
+		- beamSize: beam size for the beam search algorithm, i.e. it determines the number of trees latent path run in parallel and kept in memory.
+
+		- delta_min: pT cut scale for the showering process to stop.
+
+		- lam: decaying rate value for the exponential distribution.
+
+		- N_best = Number of jets that give the best log likelihood to be kept in memory
+
+		- save: if true, save the reclustered jet dictionary list
 
 	Returns:
-	jet dictionary
+		- jetsList: List of jet dictionaries
 	"""
 
 
@@ -117,18 +149,18 @@ def recluster(
 	)
 
 
-	bestLogLH_paths, root_node = beamSearch(jet_const, delta_min= delta_min, lam=lam, beamSize = beamSize)
-
-	# for path in bestLogLH_paths[-N_best::]:
-	# 	print('tree_dic =', path.tree_dic)
-	# 	print("---"*30)
+	bestLogLH_paths, \
+	root_node = beamSearch(
+		jet_const,
+		delta_min = delta_min,
+		lam = lam,
+		beamSize = beamSize,
+	)
 
 
 	jetsList = []
 	for path in bestLogLH_paths[-N_best::]:
 
-		# print('len(jet_const) = ', len(jet_const))
-		# Build the reclustered tree
 		tree, \
 		content, \
 		node_id, \
@@ -161,7 +193,6 @@ def recluster(
 	# Save reclustered tree
 	if save:
 		out_dir = "data/"
-		# print("input_jet[name]=",input_jet["name"])
 
 		algo = str(input_jet["name"]) + '_' + str(alpha)
 		out_filename = out_dir + str(algo) + '.pkl'
@@ -177,6 +208,7 @@ def recluster(
 
 
 
+
 def beamSearch(
 		constituents,
 		delta_min = None,
@@ -184,34 +216,26 @@ def beamSearch(
 		beamSize = None,
 ):
 	"""
-	Runs the dijMinPair function level by level starting from the list of constituents (leaves) until we reach the root of the tree.
-	Note: - We refer to both leaves and inner nodes as pseudojets.
+	Runs the level_SortedLogLH_beamPairs function level by level starting from the list of constituents (leaves) until we reach the root of the tree.
+	Note: We refer to both leaves and inner nodes as pseudojets.
 
 	Args:
-	  - content_level: jet constituents (i.e. the leaves of the tree)
-	  - alpha: defines the clustering algorithm. alpha={-1,0,1} defines the {anti-kt, CA and kt} algorithms respectively.
+		- constituents: jet constituents (i.e. the leaves of the tree)
+		- beamSize: beam size for the beam search algorithm, i.e. it determines the number of trees latent path run in parallel and kept in memory
+		- delta_min: pT cut scale for the showering process to stop.
+		- lam: decaying rate value for the exponential distribution.
 
 	Returns:
-	  Note:
-	     content_level: nodes list after deleting the constituents that are merged and adding the new pseudojet in each level.
-	      So this should only have the root of the tree at the end.
 
-	  - tree_dic: dictionary that has the node id of a parent as a key and a list with the id of the 2 children as the values
-	  - idx: array that stores the node id
-	   (the node id determines the location of the momentum vector of a pseudojet in the jet_content array)
-	    of the pseudojets that are in the current content_level array. It has the same elements as the content_level (they get updated
-	    level by level).
-	  - jet_content: array with the momentum of all the nodes of the jet tree (both leaves and inners).
-	  - root_node: root node id
-	  - Nconst: Number of leaves of the jet
-	  - N_leaves_list: List that given a node idx, stores for that idx, the number of leaves for the branch below that node. It is initialized only with the tree leaves
-	  - linkage_list: linkage list to build heat clustermap visualizations.
+		- root_node: root node idx.
+		- predecessors: Stores the jet dictionary information for each latent path included in the beam search algorithm. Each entry is an object defined by the latentPath class.
+
 	"""
 
 	Nconst = len(constituents)
 	root_node = 2 * Nconst - 2
 	logger.debug(f"Root node = (N constituents + N parent) = {root_node}")
-	# logger.info(f"Nconst = {Nconst}")
+
 
 	levelContent = np.asarray(constituents)
 	levelDeltas = np.zeros(Nconst)
@@ -222,7 +246,7 @@ def beamSearch(
 	N_leaves_list = np.ones((Nconst))
 	linkage_list = []
 
-	# List of all latent paths
+	# List that keeps track of all latent paths
 	predecessors = [ ]
 
 	path = latentPath(
@@ -238,10 +262,6 @@ def beamSearch(
 
 	predecessors.append(path)
 
-	# logger.info(f" len predecessors = {len(predecessors)}")
-	# for j in range(len(predecessors)):
-	# 	# logger.info(f"len predecessor {j} = {len(predecessors[j].levelContent)}")
-	# 	logger.info(f"predecessor {j} = {predecessors[j].tree_dic}")
 
 	for level in range(len(levelContent) - 1):
 
@@ -249,9 +269,7 @@ def beamSearch(
 		logger.debug(f" LEVEL = {level}")
 		logger.debug(f" LENGTH PREDECESSORS = {len(predecessors)}")
 
-		# logLH_pairsLevel = np.array([])
 		total_levelLatentPaths = np.array([])
-
 
 		for j in range(len(predecessors)):
 
@@ -267,34 +285,24 @@ def beamSearch(
 			# Add total log likelihood for current latent path
 			levelLatentPaths = [(x+np.sum(predecessors[j].logLH),y,x) for (x,y) in levelLatentPaths]
 
+
 			# Append beam idx (it goes from 0 to beamSize) to list
 			levelLatentPaths = np.insert(levelLatentPaths, 0, int(j), axis=1)
 			logger.debug(f" levelLatentPaths = {levelLatentPaths}")
-			logger.debug(f"                                                ")
+
 
 			# Append latent path to list containing the latent paths (the number of latent paths we keep is k with k = beamSize for each of the previous beam indexes  => we get a list of beamSize^2 latent paths)
 			total_levelLatentPaths = np.append(total_levelLatentPaths, levelLatentPaths).reshape(-1, levelLatentPaths.shape[1])
 
-		# logger.info(f"total_levelLatentPaths = {total_levelLatentPaths}")
+
+
 		logger.debug(f" Lenght total_levelLatentPaths = {len(total_levelLatentPaths)}")
 
 		# Sort all latent paths and keep the k ones with the biggest log likelihood (with k = beamSize)
-
-		# best_LevelLatentPaths = np.asarray(sorted(total_levelLatentPaths, key=lambda x: x[1])[-beamSize::])
-		# logger.info(f"length best_LevelLatentPaths = {len(best_LevelLatentPaths)}")
-		# logger.info(f"best_LevelLatentPaths = {best_LevelLatentPaths}")
 		best_LevelLatentPaths = np.asarray(sorted(total_levelLatentPaths, key=lambda x: x[1])[-beamSize::])
 
 		logger.debug(f" best_LevelLatentPaths = {best_LevelLatentPaths}")
 
-		# logger.info(f" len predecessors = {len(predecessors)}")
-		#
-		# for j in range(len(predecessors)):
-		# 	# logger.info(f"len predecessor {j} = {len(predecessors[j].levelContent)}")
-		# 	logger.info(f"predecessor {j} = {predecessors[j].tree_dic}")
-		#
-		# pairs = np.asarray(list(itertools.combinations(np.arange(len(predecessors[0].levelContent)), 2)))
-		# logger.info(f" pairs = {pairs}")
 
 		# Update latent paths and store them in predecessors
 		predecessors = updateLevelPaths(
