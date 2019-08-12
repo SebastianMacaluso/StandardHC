@@ -17,15 +17,15 @@ Note that this is an early development version.
  In this context, it becomes relevant and interesting to study algorithms to reconstruct the jet constituents (leaves) into a binary tree and how close these algorithms can reconstruct the truth latent path. Being able to perform a precise reconstruction of the truth tree would assist in physcis searches at the Large Hadron Collider. In particular, determining the nature (type) of the initial unstable particle (and its children and grandchildren) that gave rise to a specific jet is essential in searches of new physics as well as precission measurements of the current model, i.e. the Standard Model of Particle Physics.
  
  There are software tools called **Parton Showers** that encode a physics model for the simulation of jets that are produced at colliders.
-  A python package for a generative model to aid in machine learning (ML) research for jet physics was provided in [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower). This model has a tractable likelihood, and is as simple and easy to describe as possible but at the same time captures the essential ingredients of parton shower generators in full physics simulations.
+  A python package for a toy generative model of a parton shower, to aid in machine learning (ML) research for jet physics, was provided in [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower). This model has a tractable likelihood, and is as simple and easy to describe as possible but at the same time captures the essential ingredients of parton shower generators in full physics simulations.
  
  ## Reclustering Algorithms
 
  This package implements different algorithms to recluster a set of jet constituents (leaves) into a binary tree.
- In particular, we explore how different algorithms can reconstruct the latent structure of the jets generated with the [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower) package.  Comparisons and visualizations are enabled thanks to the   [`VisualizeBinaryTrees`](https://github.com/SebastianMacaluso/VisualizeBinaryTrees) package, which is also included within this package.
+ In particular, we explore how different algorithms can reconstruct the latent structure of the jets generated with the [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower) package.  Comparisons and visualizations are enabled thanks to the   [`VisualizeBinaryTrees`](https://github.com/SebastianMacaluso/VisualizeBinaryTrees) package (also included within this package for ease of use).
  
  
- There can be many techniques to recluster the set of jet constituents (leaves) into a binary tree, from machine learning based ones to more traditional algorithms. In this package, first we implement the traditional physics based generalized k_t clustering algorithms on the jets generated with the [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower). These algorithms will be used for comparison and are characterized by
+ There can be many techniques to recluster the set of jet constituents (leaves) into a binary tree, from machine learning based ones to more traditional algorithms. In this package, first we implement the traditional physics based generalized k_t clustering algorithms on the jets generated with the [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower). These algorithms, which will be used for comparison, are characterized by:
  
  - Permutation invariance with respect to the order in which we cluster the jet constituents. This is an significant difference with respect to traditional Natural Language Processing (NLP) problems where the order of the words within a sentence is relevant.
 
@@ -37,13 +37,13 @@ Note that this is an early development version.
  
  - **Greedy Likelihood**: This algorithms clusters the jet constituents by choosing the node pairing that locally maximizes the likelihood at each level (See the [`notes`](https://github.com/SebastianMacaluso/ToyJetsShower/blob/master/notes/toyshower_v4.pdf) in [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower) for a description of how the likelihood of a splitting is defined).
  
- - **Beam Search Likelihood** : this is a beam search implementation to maximize the likelihood of the reclustered tree. The beam size is an input parameter. (Note that the Greedy Likelihood is a particular case of the Beam Search Likelihood for beam size of one.) 
+ - **Beam Search Likelihood**: this is a beam search implementation to maximize the likelihood of the reclustered tree. The beam size is an input parameter. (Note that the Greedy Likelihood is a particular case of the Beam Search Likelihood algorithm for beam size of one.) 
  
  
  
  Algorithms are run from the [`treeAlgorithms`](treeAlgorithms.ipynb) notebook. 
  
- Below we compare visualizations of a sample jet generated with  the [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower) for the truth latent structure and the reclustered one.
+ Below we compare visualizations of a sample jet (generated with  the [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower) ) reclustered with the beam search algorithm and its comparison with the truth level jet.
 
  
  
