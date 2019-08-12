@@ -49,42 +49,28 @@ Note that this is an early development version.
  
  
  
+ Algorithms are run from the [`treeAlgorithms`](treeAlgorithms.ipynb) notebook. 
  
+ Below we compare visualizations of a sample jet generated with  the [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower) for the truth latent structure and the reclustered one.
 
  
  
  
  
- 
-<!-- Comparisons and visualizations are enables thanks to the   [`VisualizeBinaryTrees`](https://github.com/SebastianMacaluso/VisualizeBinaryTrees) package.-->
-<!-- -->
-<!-- Comparisons and visualizations are enables thanks to the   [`VisualizeBinaryTrees`](https://github.com/SebastianMacaluso/VisualizeBinaryTrees) package.-->
- 
-<!-- -->
-<!-- package.-->
-<!-- we provide a standalone description of a generative model to aid in machine learning (ML) research for jet physics. The motivation is to build a model that has a tractable likelihood, and is as simple and easy to describe as possible but at the same time captures the essential ingredients of parton shower generators in full physics simulations.-->
-<!-- -->
-<!--  Parton shower generators are software tools that encode a physics model for the simulation of jets that are produced at colliders, e.g. the Large Hadron Collider at CERN.-->
- 
- 
-<!-- If the truth jet tree structure is known,-->
-<!-- The closer the tree reconstructed tree is to the -->
-<!-- -->
-<!-- -->
-<!-- Thus, starting from the initial unstable particle, successive splittings are produced until all the particles are stable (i.e. the stopping rule is satisfied for each of the final particles). We refer to this final particles as the jet constituents.-->
-<!-- -->
-<!-- -->
-<!-- In this notes, we provide a standalone description of a generative model to aid in machine learning (ML) research for jet physics. The motivation is to build a model that has a tractable likelihood, and is as simple and easy to describe as possible but at the same time captures the essential ingredients of parton shower generators in full physics simulations.  The aim is for the model to have a python implementation with few software dependencies.-->
-<!-- -->
-<!-- Parton shower generators are software tools that encode a physics model for the simulation of jets that are produced at colliders, e.g. the Large Hadron Collider at CERN.-->
-<!-- Jets are a collimated spray of energetic charged and neutral particles. Parton showers generate the particle content of a jet, going through a cascade process, starting from an initial unstable particle. In this description, there is a recursive algorithm that produces binary splittings of an unstable parent particle into two children particles, and a stopping rule. Thus, starting from the initial unstable particle, successive splittings are implemented until all the particles are stable (i.e. the stopping rule is satisfied for each of the final particles). We refer to this final particles as the jet constituents.-->
-<!-- -->
-<!-- As a result of this {\it showering process}, there could be many latent paths that may lead to a specific jet (i.e. the set of constituents). Thus, it is natural and straightforward to represent a jet and the particular showering path that gave rise to it as a binary tree, where the inner nodes represent each of the unstable particles and the leaves represent the jet constituents.  -->
- 
 
 
 
+## Relevant Structure
 
+- [`treeAlgorithms.ipynb`](treeAlgorithms.ipynb): notebook that that runs the different clustering algorithms given an input truth level jet.
+- [`data`](data/): Dir with the jet dictionaries data.
+- [`scripts`](scripts/): Dir with the code to generate the reclustering and visualizations:
+    - [`beamSearch.py`](scripts/beamSearch.py): recluster a set of leaves with the beam search algorithm.
+    - [`reclustGreedyLH.py`](scripts/reclustGreedyLH.py): recluster a set of leaves with the Greedy Likelihood algorithm.
+    - [`reclusterTree.py`](scripts/reclusterTree.py): recluster a jet following the {Kt, CA, Antikt} clustering algorithms.
+    - [`Tree1D.py`](scripts/Tree1D.py):
+    - [`heatClustermap.py`](scripts/heatClustermap.py)
+    - [`linkageList.py`](scripts/linkageList.py): build the linkage list necessary for the 2D heatclustermaps for the truth jet data.
 
 
 
