@@ -119,10 +119,15 @@ def recluster(
 
 	bestLogLH_paths, root_node = beamSearch(jet_const, delta_min= delta_min, lam=lam, beamSize = beamSize)
 
+	# for path in bestLogLH_paths[-N_best::]:
+	# 	print('tree_dic =', path.tree_dic)
+	# 	print("---"*30)
+
+
 	jetsList = []
 	for path in bestLogLH_paths[-N_best::]:
 
-		print('len(jet_const) = ', len(jet_const))
+		# print('len(jet_const) = ', len(jet_const))
 		# Build the reclustered tree
 		tree, \
 		content, \
@@ -149,6 +154,9 @@ def recluster(
 		jet["logLH"] = path.logLH
 
 		jetsList.append(jet)
+
+
+	jetsList = jetsList[::-1]
 
 	# Save reclustered tree
 	if save:
@@ -203,7 +211,7 @@ def beamSearch(
 	Nconst = len(constituents)
 	root_node = 2 * Nconst - 2
 	logger.debug(f"Root node = (N constituents + N parent) = {root_node}")
-
+	# logger.info(f"Nconst = {Nconst}")
 
 	levelContent = np.asarray(constituents)
 	levelDeltas = np.zeros(Nconst)
@@ -230,6 +238,10 @@ def beamSearch(
 
 	predecessors.append(path)
 
+	# logger.info(f" len predecessors = {len(predecessors)}")
+	# for j in range(len(predecessors)):
+	# 	# logger.info(f"len predecessor {j} = {len(predecessors[j].levelContent)}")
+	# 	logger.info(f"predecessor {j} = {predecessors[j].tree_dic}")
 
 	for level in range(len(levelContent) - 1):
 
@@ -239,6 +251,7 @@ def beamSearch(
 
 		# logLH_pairsLevel = np.array([])
 		total_levelLatentPaths = np.array([])
+
 
 		for j in range(len(predecessors)):
 
@@ -262,18 +275,31 @@ def beamSearch(
 			# Append latent path to list containing the latent paths (the number of latent paths we keep is k with k = beamSize for each of the previous beam indexes  => we get a list of beamSize^2 latent paths)
 			total_levelLatentPaths = np.append(total_levelLatentPaths, levelLatentPaths).reshape(-1, levelLatentPaths.shape[1])
 
-
+		# logger.info(f"total_levelLatentPaths = {total_levelLatentPaths}")
 		logger.debug(f" Lenght total_levelLatentPaths = {len(total_levelLatentPaths)}")
 
 		# Sort all latent paths and keep the k ones with the biggest log likelihood (with k = beamSize)
-		best_LevelLatentPaths = sorted(total_levelLatentPaths, key=lambda x: x[1])[-beamSize::]
+
+		# best_LevelLatentPaths = np.asarray(sorted(total_levelLatentPaths, key=lambda x: x[1])[-beamSize::])
+		# logger.info(f"length best_LevelLatentPaths = {len(best_LevelLatentPaths)}")
+		# logger.info(f"best_LevelLatentPaths = {best_LevelLatentPaths}")
+		best_LevelLatentPaths = np.asarray(sorted(total_levelLatentPaths, key=lambda x: x[1])[-beamSize::])
 
 		logger.debug(f" best_LevelLatentPaths = {best_LevelLatentPaths}")
+
+		# logger.info(f" len predecessors = {len(predecessors)}")
+		#
+		# for j in range(len(predecessors)):
+		# 	# logger.info(f"len predecessor {j} = {len(predecessors[j].levelContent)}")
+		# 	logger.info(f"predecessor {j} = {predecessors[j].tree_dic}")
+		#
+		# pairs = np.asarray(list(itertools.combinations(np.arange(len(predecessors[0].levelContent)), 2)))
+		# logger.info(f" pairs = {pairs}")
 
 		# Update latent paths and store them in predecessors
 		predecessors = updateLevelPaths(
 			best_LevelLatentPaths,
-			predecessors = predecessors,
+			prevPredecessors = predecessors,
 			Nconst = Nconst,
 			Nparent = level,
 		)
@@ -319,6 +345,7 @@ def level_SortedLogLH_beamPairs(
 	                       in_levelDeltas[pairs][k][1], delta_min, lam), k) for k in range(len(in_levelContent[pairs]))]
 
 	maxPairs = sorted(logLH_pairs, key=lambda x: x[0])[-beamSize::]
+	# logger.info(f" maxPairs= {[y for (x,y) in maxPairs]}")
 
 
 	return maxPairs
@@ -332,15 +359,16 @@ def level_SortedLogLH_beamPairs(
 
 def updateLevelPaths(
 		best_LevelPaths,
-		predecessors = None,
+		prevPredecessors = None,
 		Nconst= None,
 		Nparent = None,
 ):
 
 	# Get all possible pairings (all predecessor paths have the same number of nodes so we pick predecessor[0])
-	pairs = np.asarray(list(itertools.combinations(np.arange(len(predecessors[0].levelContent)), 2)))
+	pairs = np.asarray(list(itertools.combinations(np.arange(len(prevPredecessors[0].levelContent)), 2)))
 
 	logger.debug(f"------------------------------------------------------------")
+	# logger.info(f"------------------------------------------------------------")
 
 
 	updatedPredecessors = []
@@ -350,17 +378,17 @@ def updateLevelPaths(
 		beamIdx = int(beamIdx)
 		MaxPairIdx = int(MaxPairIdx)
 
-		levelContent = copy.deepcopy(predecessors[beamIdx].levelContent)
-		levelDeltas = copy.deepcopy(predecessors[beamIdx].levelDeltas)
-		logLH = copy.deepcopy(predecessors[beamIdx].logLH)
-		N_leaves_list = copy.deepcopy(predecessors[beamIdx].N_leaves_list)
-		linkage_list = copy.deepcopy(predecessors[beamIdx].linkage_list)
-		tree_dic = predecessors[beamIdx].tree_dic
-		jetContent = copy.deepcopy(predecessors[beamIdx].jetContent)
-		idx = copy.deepcopy(predecessors[beamIdx].idx)
+		levelContent = copy.deepcopy(prevPredecessors[beamIdx].levelContent)
+		levelDeltas = copy.deepcopy(prevPredecessors[beamIdx].levelDeltas)
+		logLH = copy.deepcopy(prevPredecessors[beamIdx].logLH)
+		N_leaves_list = copy.deepcopy(prevPredecessors[beamIdx].N_leaves_list)
+		linkage_list = copy.deepcopy(prevPredecessors[beamIdx].linkage_list)
+		tree_dic = copy.deepcopy(prevPredecessors[beamIdx].tree_dic)
+		jetContent = copy.deepcopy(prevPredecessors[beamIdx].jetContent)
+		idx = copy.deepcopy(prevPredecessors[beamIdx].idx)
 
-		logger.debug(f" predecessors[{beamIdx}].logLH  = {predecessors[beamIdx].logLH}")
-		logger.debug(f" Lenght predecessors[{beamIdx}].logLH  = {len(predecessors[beamIdx].logLH)}")
+		logger.debug(f" prevPredecessors[{beamIdx}].logLH  = {prevPredecessors[beamIdx].logLH}")
+		logger.debug(f" Lenght prevPredecessors[{beamIdx}].logLH  = {len(prevPredecessors[beamIdx].logLH)}")
 
 
 		# List that given a node idx, stores for that idx, the number of leaves for the branch below that node.
@@ -391,7 +419,15 @@ def updateLevelPaths(
 
 
 		# Add a new key to the tree dictionary
+		# print("idx")
 		tree_dic[Nconst + Nparent] = idx[pairs[MaxPairIdx]]
+		# logger.info(f" Nconst + Nparent =  {Nconst + Nparent}")
+		# logger.info(f" MaxPairIdx = {MaxPairIdx}")
+		# logger.info(f" idx = {idx}")
+		# logger.info(f" pairs[MaxPairIdx] = {pairs[MaxPairIdx]}")
+		# logger.info(f" idx[pairs[MaxPairIdx]] = {idx[pairs[MaxPairIdx]]}")
+
+
 
 
 		# Delete the merged nodes
@@ -417,6 +453,7 @@ def updateLevelPaths(
 		)
 
 		updatedPredecessors.append(updatedPath)
+
 
 	return updatedPredecessors
 
@@ -690,6 +727,11 @@ def _traverse_rec(
     if root >= Nleaves:
 
         children = tree_dic[root]
+
+        # print(" root = ", root)
+        # print(" Children = ",children)
+
+
         logger.debug(f"Children = {children}")
 
         L_idx = children[0]
