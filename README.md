@@ -55,18 +55,19 @@ Note that this is an early development version.
 
  
  
- ![Fig.1](plots/heatClustermap/figDiffTruthBeamSize50_singlepath_jet10.jpg)
+ ![Fig.1](plots/1DTreeOnly/figBeamSize50_jet10.png)
  
  ##### Fig. 1: 1D Tree-only visualization of the beam search (with beam size of 50) reclustered tree for a sample jet generated with the [`Toy Generative Model for Jets`](https://github.com/SebastianMacaluso/ToyJetsShower) model. The horizontal ordering of the leaves corresponds to the order in which the leaves are accessed when traversing the tree.
  
  <pre>
  
  </pre>
- ![Fig.2](plots/heatClustermap/figBeamSize50_jet10.png)
+ ![Fig.2](plots/heatClustermap/figDiffTruthBeamSize50_singlepath_jet10.jpg)
  
  ##### Fig. 2: Plot for the heat clustermap difference between the truth jet and the beam search (with beam size of 50) reclustered one. The closer the trees substructure is, the closer to cero the values in each entry. 
  <pre>
  
+ <pre>
 
 
 
