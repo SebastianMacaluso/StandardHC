@@ -81,7 +81,7 @@ Note that this is an early development version.
 
 1. Clone the *ReclusterTreeAlgorithms* repository
 2. `cd ReclusterTreeAlgorithms`
-3. `make`
+3. run `make install`
 
 
 <pre>
