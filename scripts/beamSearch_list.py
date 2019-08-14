@@ -654,6 +654,7 @@ def _traverse_rec(
 
 
 def getConstituents(jet, parent, node_id, outers_list):
+
 	"""
 	Recursive function to get a list of the tree leaves
 	"""
