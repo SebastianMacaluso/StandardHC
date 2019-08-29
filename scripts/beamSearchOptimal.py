@@ -20,7 +20,9 @@ logger = get_logger(level=logging.INFO)
 Beam search algorithm:
 1) Get all the possible pairings log likelihood for the leaves of the tree and sort them. O(N^2 logN)
 2) for each level:
-	for each beam push the max log LH pairs to a priority queue of size b (b is the beam size) O(b^2 log b)
+	for each beam get a list of size b (b is the beam size) with max log LH pairs. 
+	Sort the list => O (b^2 log b)
+	loop over the list and keep only one jet each time the total log LH value is repeated. O(b^2)
 	update each tree => O(b N^2 log N)
 	
 Total: O( b^2 N log b + b N^3 log N). Typically b > N, but for b log < N^2 log N,  we get O(b N^3 log N)
@@ -152,7 +154,7 @@ def recluster(
 
 	jetsList = []
 
-	for path in bestLogLH_paths[-N_best::]:
+	for path in bestLogLH_paths[0:N_best]:
 
 		jet = {}
 		jet["root_id"] = root_node
@@ -191,7 +193,6 @@ def recluster(
 
 	logger.debug(f" Recluster and build tree algorithm total time = {time.time() - reclustStartTime}")
 
-	# jetsList = jetsList[::-1]
 
 
 	""" Save reclustered tree """
@@ -224,11 +225,10 @@ def beamSearch(
 		beamSize = None,
 ):
 	"""
-	Runs the level_SortedLogLH_beamPairs function level by level starting from the list of constituents (leaves) until we reach the root of the tree.
-	Note: We refer to both leaves and inner nodes as pseudojets.
+	Runs a beam search algorithm to cluster the jet constituents
 
 	Args:
-		- constituents: jet constituents (i.e. the leaves of the tree)
+		- levelContent: jet constituents (i.e. the leaves of the tree)
 		- beamSize: beam size for the beam search algorithm, i.e. it determines the number of trees latent path run in parallel and kept in memory
 		- delta_min: pT cut scale for the showering process to stop.
 		- lam: decaying rate value for the exponential distribution.
@@ -295,27 +295,42 @@ def beamSearch(
 		logger.debug(f" LENGTH PREDECESSORS = {len(predecessors)}")
 
 
-		""" Initialize priority queue to keep only beam size best latent paths (max log LH) at each level:
-		 (sumLogLH, beamIdx, MaxPairIdx, pairlogLH) """
-		pQueue = [(- np.inf, -9999, [-9999, -9999], -9999)] * beamSize
-		heapq.heapify(pQueue)
-
+		total_levelLatentPaths = []
 
 		for j in range(len(predecessors)):
 
-			pQueue = level_SortedLogLH_beamPairs (
-				predecessor = predecessors[j],
-				beamSize = beamSize,
-				levelQueue = pQueue,
-				beamIdx = j,
-			)
+			""" Append to list: (beamIdx, sumLogLH, MaxPairIdx, pairlogLH) """
+			levelLatentPaths = [
+				(int(j), x + np.sum(predecessors[j].logLH), y, x)
+				for (x, y) in predecessors[j].sortPairs[-beamSize::]
+			]
 
-		logger.debug(f" Best latent paths in priority queue  = {np.asarray(pQueue)}")
+			"""Append latent path  => we get a final list of beamSize^2 latent paths)"""
+			total_levelLatentPaths = total_levelLatentPaths + levelLatentPaths
+
+
+		logger.debug(f" Lenght total_levelLatentPaths = {len(total_levelLatentPaths)}")
+
+
+		""" Sort all latent paths """
+		dtype = [('beamIdx', int),('SumlogLH', float), ('pair', object),('logLH', float)]
+		c = np.array(total_levelLatentPaths, dtype=dtype)
+		total_levelLatentPaths = np.sort(c, order='SumlogLH')
+
+
+		""" Keep only one latent path for each total log likelihood value. This results in a much smaller beam size needed to achieve same performance. The reason is that trees are permutation invariant => many latent path give the same tree"""
+		best_LevelLatentPaths = ([total_levelLatentPaths[0]]
+		                         +[total_levelLatentPaths[i]
+		                           for i in range(1,len(total_levelLatentPaths))
+		                           if total_levelLatentPaths[i][1] > total_levelLatentPaths[i-1][1]]
+		                         )[-beamSize::]
+
+		logger.debug(f" best_LevelLatentPaths = {best_LevelLatentPaths}")
 
 
 		""" Update latent paths (remove clustered nodes and add new one) and store them in predecessors """
 		predecessors = updateLevelPaths(
-			best_LevelPaths = pQueue,
+			best_LevelPaths = best_LevelLatentPaths,
 			prevPredecessors = predecessors,
 			Nconst = Nconst,
 			Nparent = Nconst + level,
@@ -375,58 +390,14 @@ def sortedPairs(
 		           for j in range(k, 0, -1)
 	           ]
 
-	# pairs = sorted(pairs, key = lambda x: x[0])
 
 	dtype = [('logLH', float), ('pair', object)]
 	b = np.array(pairs, dtype=dtype)
 	pairs = np.sort(b, order='logLH')
 
-	# logger.info(f" best pairs = {pairs[-10::]}")
+	logger.debug(f" best pairs = {pairs[-10::]}")
 
 	return pairs
-
-
-
-
-
-
-
-def level_SortedLogLH_beamPairs(
-	predecessor = None,
-	beamSize = None,
-	levelQueue = None,
-	beamIdx = None,
-):
-	"""
-	-Calculate all splitting log likelihood between all possible pair of constituents at a certain level and sort them.
-	levelQueue = (total logLH, beamIdx, [node i,node j], level logLH )
-
-	Args:
-	    - in_levelContent: array with the constituents momentum list for the current level (i.e. deleting the constituents that are merged and
-	      adding the new pseudojet from merging them)
-	    - in_levelDeltas: list with the delta value (for the splitting of a parent node) of each node. Zero if a leaf.
-		- beamSize: beam size for the beam search algorithm, i.e. it determines the number of trees latent path run in parallel and kept in memory
-		- delta_min: pT cut scale for the showering process to stop.
-		- lam: decaying rate value for the exponential distribution.
-
-	Returns:
-	    - maxPairs: top beamSize pairings at current level (logLH, indexes in pairs list) the give the greatest log likellihood
-
-	"""
-
-	beamPairs = predecessor.sortPairs[-beamSize::]
-	SumLogLH = np.sum(predecessor.logLH)
-
-
-	[heapq.heappushpop(levelQueue ,
-			                        (SumLogLH + entry[0],
-			                         beamIdx,
-			                         entry[1],
-			                         entry[0])
-			                        ) for entry in beamPairs]
-
-
-	return levelQueue
 
 
 
@@ -468,7 +439,7 @@ def updateLevelPaths(
 		logger.debug(f" ------------------------------- ")
 		logger.debug(f" beam number = {k}")
 
-		(SumLogLH, beamIdx, maxPairIdx, maxPairLogLH) = heapq.heappop(best_LevelPaths)
+		(beamIdx, SumLogLH, maxPairIdx, maxPairLogLH) = best_LevelPaths.pop()
 
 
 		logger.debug(f" (SumLogLH, maxPairLogLH) = {SumLogLH, maxPairLogLH}")
@@ -539,11 +510,9 @@ def updateLevelPaths(
 				for j in range(len(idx))
 			]
 
-		# [bisect.insort(sortPairs, entry) for entry in NewNodePairs]
 
 		sortPairs = sortPairs + NewNodePairs
-		#
-		# sortPairs = sorted(sortPairs, key=lambda x: x[0])
+
 		dtype = [('logLH', float), ('pair', object)]
 		a = np.array(sortPairs, dtype=dtype)
 		sortPairs = np.sort(a, order='logLH')

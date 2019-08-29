@@ -19,20 +19,18 @@ def get_delta_PC(p, pC):
     return np.sqrt(np.sum((p / 2 - pC) ** 2))
 
 
+
 def split_logLH(pL, delta_L, pR, delta_R, delta_min, lam):
     """
     Takes two edges (p, delta) and
     return the splitting that generated them (p, delta_P, phi)
     with its log likelihood
-
-    Note: Leaves in the Toy Generative Model are assigned Delta=-1
     """
-    # p = pR + pL
-    # delta_vec = (pR - pL) / 2
-    # phi = np.arctan(delta_vec[0] / delta_vec[1])
+    p = pR + pL
+    delta_vec = (pR - pL) / 2
+    phi = np.arctan(delta_vec[0] / delta_vec[1])
     delta_P = get_delta_LR(pL, pR)
 
-    # Get logLH
     def get_p(delta_P, delta, delta_min, lam):
         if delta > 0:
             r = delta / delta_P
@@ -47,8 +45,39 @@ def split_logLH(pL, delta_L, pR, delta_R, delta_min, lam):
         + np.log(1 / 2 / np.pi)
     )
 
+    return logLH, p, delta_P, phi
+
+
+
+def Basic_split_logLH(pL, delta_L, pR, delta_R, delta_min, lam):
+    """
+    Takes two edges (p, delta) and
+    return the splitting that generated them (p, delta_P, phi)
+    with its log likelihood
+
+    Note: Leaves in the Toy Generative Model are assigned Delta=-1
+    """
+
+    delta_P = get_delta_LR(pL, pR)
+
+    # Get logLH
+    def get_p(delta_P, delta, delta_min, lam):
+        if delta > 0:
+            r = delta / delta_P
+            return np.log(lam) - lam * r
+        else:
+            r = delta_min / delta_P
+            return np.log(1 - np.exp(-lam * r))
+
+
+    logLH = (
+        get_p(delta_P, delta_L, delta_min, lam)
+        + get_p(delta_P, delta_R, delta_min, lam)
+        + np.log(1 / 2 / np.pi)
+    )
+
     return logLH
-    # return logLH, p, delta_P, phi
+
 
 
 def fill_jet_info(jet, root_id=0, parent_id=None):
@@ -132,7 +161,7 @@ def _get_jet_logLH(jet, root_id=None, Lambda=None, delta_min=None, logLH=None):
         pR = jet["content"][idR]
         delta_L = jet["deltas"][idL]
         delta_R = jet["deltas"][idR]
-        llh, _, _, _ = split_logLH(pL, delta_L, pR, delta_R, delta_min, Lambda)
+        llh, _ , _ , _ = split_logLH(pL, delta_L, pR, delta_R, delta_min, Lambda)
         logLH.append(llh)
 
         _get_jet_logLH(
