@@ -12,120 +12,122 @@ logger = get_logger(level=logging.INFO)
 
 
 def recluster(input_jet, save=False, delta_min= None, lam=None):
-  """
-  Uses helper functions to get the leaves of an  input jet, recluster them following some algorithm determined by the value of alpha,
-   create the new tree for the chosen algorithm, make a jet dictionary and save it.
+	"""
+	Uses helper functions to get the leaves of an  input jet, recluster them following some algorithm determined by the value of alpha,
+	create the new tree for the chosen algorithm, make a jet dictionary and save it.
 
-   Create a dictionary with all the jet tree info
-  - jet["root_id"]: root node id of the tree
-  - jet["content"]: list with the tree nodes (particles) momentum vectors. For the ToyJetsShower we consider a 2D model,
-    so we have (py,pz), with pz the direction of the beam axis
-  - jet["tree"]: list with the tree structure. Each entry contains a list with the [left,right] children of a node.
-    If [-1,-1] then the node is a leaf.
+	Create a dictionary with all the jet tree info
+	- jet["root_id"]: root node id of the tree
+	- jet["content"]: list with the tree nodes (particles) momentum vectors. For the ToyJetsShower we consider a 2D model,
+	so we have (py,pz), with pz the direction of the beam axis
+	- jet["tree"]: list with the tree structure. Each entry contains a list with the [left,right] children of a node.
+	If [-1,-1] then the node is a leaf.
 
-  New features added to the tree:
-  - jet["tree_ancestors"]: List with one entry for each leaf of the tree, where each entry lists all the ancestor node ids
-    when traversing the tree from the root to the leaf node.
-  - jet["linkage_list"]: linkage list to build heat clustermap visualizations.
-  - jet["Nconst"]: Number of leaves of the tree.
-  - jet["algorithm"]: Algorithm to generate the tree structure, e.g. truth, kt, antikt, CA.
+	New features added to the tree:
+	- jet["tree_ancestors"]: List with one entry for each leaf of the tree, where each entry lists all the ancestor node ids
+	when traversing the tree from the root to the leaf node.
+	- jet["linkage_list"]: linkage list to build heat clustermap visualizations.
+	- jet["Nconst"]: Number of leaves of the tree.
+	- jet["algorithm"]: Algorithm to generate the tree structure, e.g. truth, kt, antikt, CA.
 
-  Args:
-  - input_jet: any jet dictionary with the clustering history.
-  - alpha: defines the clustering algorithm. alpha={-1,0,1} defines the {anti-kt, CA and kt} algorithms respectively.
-  - save: if true, save the reclustered jet dictionary
+	Args:
+	- input_jet: any jet dictionary with the clustering history.
+	- alpha: defines the clustering algorithm. alpha={-1,0,1} defines the {anti-kt, CA and kt} algorithms respectively.
+	- save: if true, save the reclustered jet dictionary
 
-  Returns:
-    jet dictionary
-  """
-
-
-  def _rec(jet, parent, node_id, outers_list):
-    """
-    Recursive function to get a list of the tree leaves
-    """
-    if jet["tree"][node_id, 0] == -1:
-
-      outers_list.append(jet["content"][node_id])
-
-    else:
-      _rec(
-        jet,
-        node_id,
-        jet["tree"][node_id, 0],
-        outers_list,
-      )
-
-      _rec(
-        jet,
-        node_id,
-        jet["tree"][node_id, 1],
-        outers_list,
-      )
-
-    return outers_list
+	Returns:
+	jet dictionary
+	"""
 
 
-  outers = []
+	def _rec(jet, parent, node_id, outers_list):
+		"""
+        Recursive function to get a list of the tree leaves
+        """
+		if jet["tree"][node_id, 0] == -1:
 
-  # Get constituents list (leaves)
-  jet_const = np.asarray(
-    _rec(
-    input_jet,
-    -1,
-    input_jet["root_id"],
-    outers,
-  )
-  )
+			outers_list.append(jet["content"][node_id])
 
-  # Run the kt, CA or antikt clustering algorithms
-  raw_tree, \
-  idx, \
-  jet_content, \
-  root_node, \
-  Nconst, \
-  N_leaves_list, \
-  linkage_list = greedyLH(jet_const, delta_min= delta_min, lam=lam)
+		else:
+			_rec(
+		    jet,
+		    node_id,
+		    jet["tree"][node_id, 0],
+		    outers_list,
+		    )
 
+			_rec(
+		    jet,
+		    node_id,
+		    jet["tree"][node_id, 1],
+		    outers_list,
+		    )
 
-  # Build the reclustered tree
-  tree, \
-  content, \
-  node_id, \
-  tree_ancestors = _traverse(root_node,
-                             jet_content,
-                             tree_dic=raw_tree,
-                             Nleaves=Nconst,
-                             )
+		return outers_list
 
 
-  # Create jet dictionary with tree features
-  jet = {}
-  jet["root_id"] = 0
-  jet["tree"] = np.asarray(tree).reshape(-1, 2)
-  jet["content"] = np.asarray([np.asarray(c) for c in content]).reshape(-1, 2)
-  jet["linkage_list"]=linkage_list
-  jet["node_id"]=node_id
-  jet["tree_ancestors"]=tree_ancestors
-  jet["Nconst"]=Nconst
-  jet["algorithm"]= "greedyLH"
-  jet["pt_cut"] = delta_min
-  jet["Lambda"] = lam
+	outers = []
+
+	# Get constituents list (leaves)
+	jet_const = np.asarray(
+	_rec(
+	input_jet,
+	-1,
+	input_jet["root_id"],
+	outers,
+	)
+	)
+
+	# Run the kt, CA or antikt clustering algorithms
+	raw_tree, \
+	idx, \
+	jet_content, \
+	root_node, \
+	Nconst, \
+	N_leaves_list, \
+	linkage_list,\
+	logLH = greedyLH(jet_const, delta_min= delta_min, lam=lam)
 
 
-  # Save reclustered tree
-  if save:
-    out_dir = "data/"
-    # print("input_jet[name]=",input_jet["name"])
+	# Build the reclustered tree
+	tree, \
+	content, \
+	node_id, \
+	tree_ancestors = _traverse(root_node,
+	                         jet_content,
+	                         tree_dic=raw_tree,
+	                         Nleaves=Nconst,
+	                         )
 
-    algo = str(input_jet["name"]) + '_' + str(alpha)
-    out_filename = out_dir + str(algo) + '.pkl'
-    logger.info(f"Output jet filename = {out_filename}")
-    with open(out_filename, "wb") as f:
-      pickle.dump(jet, f, protocol=2)
+
+	# Create jet dictionary with tree features
+	jet = {}
+	jet["root_id"] = 0
+	jet["tree"] = np.asarray(tree).reshape(-1, 2)
+	jet["content"] = np.asarray([np.asarray(c) for c in content]).reshape(-1, 2)
+	jet["linkage_list"]=linkage_list
+	jet["node_id"]=node_id
+	jet["tree_ancestors"]=tree_ancestors
+	jet["Nconst"]=Nconst
+	jet["algorithm"]= "greedyLH"
+	jet["pt_cut"] = delta_min
+	jet["Lambda"] = lam
+	jet["logLH"] = np.asarray(logLH)
 
 
-  return jet
+	# Save reclustered tree
+	if save:
+		out_dir = "data/"
+		# print("input_jet[name]=",input_jet["name"])
+
+		algo = str(input_jet["name"]) + '_' + str(alpha)
+		out_filename = out_dir + str(algo) + '.pkl'
+		logger.info(f"Output jet filename = {out_filename}")
+		with open(out_filename, "wb") as f:
+			pickle.dump(jet, f, protocol=2)
+
+
+	return jet
 
 
 
@@ -201,7 +203,7 @@ def greedyLH(content_level, delta_min= None, lam=None):
 			lam = lam
 	    )
 
-	return tree_dic, idx, jet_content, root_node, Nconst, N_leaves_list, linkage_list
+	return tree_dic, idx, jet_content, root_node, Nconst, N_leaves_list, linkage_list, logLH
 
 
 
@@ -249,7 +251,7 @@ def logLHMaxPair(
 	      Linkage list format: A  (n - 1) by 4 matrix Z is returned. At the i-th iteration, clusters with indices Z[i, 0] and Z[i, 1] are combined to form cluster (n + 1) . A cluster with an index less than n  corresponds to one of the n original observations. The distance between clusters Z[i, 0] and Z[i, 1] is given by Z[i, 2]. The fourth value Z[i, 3] represents the number of original observations in the newly formed cluster.
 
 	Returns:
-	    - new_list: new content_level after deleting the constituents that are merged and adding the new pseudojet in the current level.
+	    - NewContent_level: new content_level after deleting the constituents that are merged and adding the new pseudojet in the current level.
 	    - var_dij_history
 	    - tree_dic
 	    - idx
@@ -264,18 +266,25 @@ def logLHMaxPair(
 
 
 	# Get all logLH at current level
-	logLH_pairs = [(likelihood.split_logLH(content_level[pairs][k][0], deltas_level[pairs][k][0], content_level[pairs][k][1],
+	logLH_pairs = [(likelihood.Basic_split_logLH(content_level[pairs][k][0], deltas_level[pairs][k][0], content_level[pairs][k][1],
 	                       deltas_level[pairs][k][1], delta_min, lam), k) for k in range(len(content_level[pairs]))]
 
-	print("Sorted logLH_pairs = ", sorted(logLH_pairs, key=lambda x: x[0]))
-	print(" ")
+	# print("Sorted logLH_pairs = ", sorted(logLH_pairs, key=lambda x: x[0]))
+	# print(" ")
 
 	# Get pair index (in pairs list) with max log likellihood
 	max_tuple = sorted(logLH_pairs, key=lambda x: x[0])[-1]
 	max_pair = max_tuple[1]
 
-	print("max_tuple = ",max_tuple)
-	print("pairs[max_pair] = ", pairs[max_pair])
+	# print("max_tuple = ",max_tuple)
+	# logger.info(f" ---------------------------------------- ")
+	# logger.info(f" logLH_pairs= {logLH_pairs}")
+	# logger.info(f" sorted(logLH_pairs, key=lambda x: x[0])= {sorted(logLH_pairs, key=lambda x: x[0])}")
+	# logger.info(f" max_tuple_sort = {max_tuple}")
+	#
+	# logger.info(f"pairs[max_pair] = {pairs[max_pair]}")
+	# logger.info(f" content_level = {np.asarray(content_level)}")
+
 
 	logger.debug(f"max_pair= {pairs[max_pair]}")
 
@@ -285,7 +294,7 @@ def logLHMaxPair(
 	  (N_leaves_list, [N_leaves_list[idx[pairs[max_pair][0]]] + N_leaves_list[idx[pairs[max_pair][1]]]]))
 
 	# List with all the previous max log likelihood
-	logLH.append(logLH_pairs[max_pair])
+	logLH.append(logLH_pairs[max_pair][0])
 
 	linkage_list.append([idx[pairs[max_pair][0]], idx[pairs[max_pair][1]], np.absolute(max_tuple[0]), N_leaves_list[-1]])
 
@@ -297,16 +306,15 @@ def logLHMaxPair(
 
 	# Update list of nodes momentum for the next level
 	# print(" content_level = ", content_level)
-	new_list = np.reshape(
+	NewContent_level = np.reshape(
 	  np.append(np.delete(content_level, pairs[max_pair], 0), [np.sum(content_level[pairs[max_pair]], axis=0)]), (-1, 2))
-	logger.debug(f"New list =  {new_list}")
-	# print("const list after =",new_list)
+	logger.debug(f"New Content_level =  {NewContent_level}")
+	# print("const list after =",NewContent_level)
 
 	# Update list of Deltas for the next level
-	print("NewDeltas_level before = ", deltas_level)
+	# print("NewDeltas_level before = ", deltas_level)
 	NewDeltas_level = np.append(np.delete(deltas_level, pairs[max_pair], 0), [likelihood.get_delta_LR(content_level[pairs[max_pair]][0], content_level[pairs[max_pair]][1])])
 	logger.debug(f"NewDeltas_level list =  {NewDeltas_level}")
-	print("NewDeltas_level after = ", NewDeltas_level)
 
 	jet_content = np.concatenate((jet_content, [np.sum(content_level[pairs[max_pair]], axis=0)]), axis=0)
 
@@ -319,7 +327,7 @@ def logLHMaxPair(
 	idx = np.concatenate((np.delete(idx, pairs[max_pair]), [Nconst + Nparent]), axis=0)
 	logger.debug(f"idx = {idx}")
 
-	return new_list, NewDeltas_level, logLH, tree_dic, idx, jet_content, N_leaves_list, linkage_list
+	return NewContent_level, NewDeltas_level, logLH, tree_dic, idx, jet_content, N_leaves_list, linkage_list
 
 	# sys.exit()
 	#
