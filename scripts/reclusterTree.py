@@ -10,7 +10,7 @@ logger = get_logger(level=logging.INFO)
 
 
 
-def recluster(input_jet, alpha=None, save=True):
+def recluster(input_jet, alpha=None, save=True, out_dir = None):
   """
   Uses helper functions to get the leaves of an  input jet, recluster them following some algorithm determined by the value of alpha,
    create the new tree for the chosen algorithm, make a jet dictionary and save it.
@@ -112,7 +112,8 @@ def recluster(input_jet, alpha=None, save=True):
 
   # Save reclustered tree
   if save:
-    out_dir = "data/"
+    if not out_dir:
+        out_dir = "data/"
     # print("input_jet[name]=",input_jet["name"])
 
     algo = str(input_jet["name"]) + '_' + str(alpha)
@@ -292,7 +293,8 @@ def dijMinPair(
     # List with all the previous min{d_ij}
     var_dij_history.append(dij_list[min_pair])
 
-    linkage_list.append([idx[pairs[min_pair][0]], idx[pairs[min_pair][1]], min_tuple[0], N_leaves_list[-1]])
+    linkage_list.append([idx[pairs[min_pair][0]], idx[pairs[min_pair][1]], Nparent, N_leaves_list[-1]])
+    # linkage_list.append([idx[pairs[min_pair][0]], idx[pairs[min_pair][1]], min_tuple[0], N_leaves_list[-1]])
 
 
     logger.debug(f"------------------------------------------------------------")

@@ -111,6 +111,7 @@ def recluster(
 		jet_const,
 		delta_min = delta_min,
 		lam = lam,
+		M_Hard = input_jet["M_Hard"],
 	)
 
 
@@ -191,7 +192,7 @@ def getConstituents(jet, node_id, outers_list):
 	return outers_list
 
 
-def greedyLH(levelContent, delta_min= None, lam=None):
+def greedyLH(levelContent, delta_min= None, lam=None, M_Hard = None):
 	"""
 	Runs the logLHMaxLevel function level by level starting from the list of constituents (leaves) until we reach the root of the tree.
 
@@ -262,6 +263,12 @@ def greedyLH(levelContent, delta_min= None, lam=None):
 			lam = lam,
 		)
 
+	# logger.info(f" log LH list before setting last merging likelihood to 1 = {logLH}")
+	if M_Hard is not None:
+
+		logLH[-1]=0
+
+	# logger.info(f" log LH list after setting last merging likelihood to 1 = {logLH}")
 
 	return jetTree, idx, jetContent, root_node, Nconst, N_leaves_list, linkage_list, logLH
 

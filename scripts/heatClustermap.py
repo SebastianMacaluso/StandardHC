@@ -2,13 +2,136 @@ import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
 import logging
+import copy
 
 from scripts import linkageList
+from scripts import BSlinkageList
 from scripts import reclusterTree
-from scripts import beamSearch
+from scripts import beamSearchOptimal as beamSearch
 from scripts.utils import get_logger
 
 logger = get_logger(level=logging.INFO)
+
+
+def HeatDendrogram(
+		jet1 = None,
+		jet2 = None,
+		full_path = False,
+		FigName = None,
+):
+	"""
+	Create  a heat dendrogram clustermap.
+
+	Args:
+	:param truthJet: Truth jet dictionary
+	:param recluster_jet1: reclustered jet 1
+	:param recluster_jet2: reclustered jet 2
+	:param full_path: Bool. If True, then use the total number of steps to connect a pair of leaves as the heat data. If False, then Given a pair of jet constituents {i,j} and the number of steps needed for each constituent to reach their closest common ancestor {Si,Sj}, the heat map scale represents the maximum number of steps, i.e. max{Si,Sj}.
+	:param FigName: Dir and location to save a plot.
+	"""
+
+	# Build truth jet heat data
+	Heatjet = copy.deepcopy(jet1)
+
+	# if truth:
+	# Calculate linkage list and add it to the truth jet dict
+	linkageList.draw_truth(Heatjet)
+
+	ancestors = Heatjet["tree_ancestors"]
+
+
+	# Number of nodes from root to leaf for each leaf
+	level_length = [len(entry) for entry in ancestors]
+	max_level = np.max(level_length)
+
+	# Pad tree_ancestors list for dim1=max_level, adding a different negative number at each row (for each leaf)
+	ancestors1_array = np.asarray([np.concatenate(
+		(ancestors[i], -(i + 1) * np.ones((max_level - len(ancestors[i]))))
+	) for i in range(len(ancestors))])
+
+
+	N_heat = len(ancestors1_array) # Number of constituents
+	heat_data = np.zeros((N_heat, N_heat))
+	neg_entries = np.sum(np.array(ancestors1_array) < 0, axis=1)
+
+	#######################
+	# Get total number of steps to connect a pair of leaves as the heat data
+	if full_path:
+		for i in range(N_heat):
+			for j in range(i + 1, N_heat):
+
+				logger.debug(f"Number of steps between nodes =  {np.count_nonzero(ancestors1_array[i]-ancestors1_array[j]==0)}")
+
+				# Sum of number of nodes  from root to leaf for each leaf - 2 * number of nodes that are common ancestors
+				heat_data[i, j] = (2 * max_level - (neg_entries[i] + neg_entries[j])) \
+				                  - 2 * np.count_nonzero((ancestors1_array[i] - ancestors1_array[j]) == 0)
+
+				heat_data[j, i] = heat_data[i, j]
+
+				logger.debug(f"heat data = {heat_data[i, j]}")
+
+
+	# Given a pair of jet constituents {i,j} and the number of steps needed for each constituent to reach their closest common ancestor
+	# {Si,Sj}, the heat map scale represents the maximum number of steps, i.e. max{Si,Sj}.
+	else:
+		for i in range(N_heat):
+			for j in range(i + 1, N_heat):
+
+				logger.debug(f"Number of steps between nodes =  {np.count_nonzero(ancestors1_array[i]-ancestors1_array[j]==0)}")
+
+				# Number of nodes for the longest path from root to leaf (between the 2 leaves) - Number of nodes that are common ancestors
+				heat_data[i, j] = (max_level - np.minimum(neg_entries[i], neg_entries[j])) \
+				                  - np.count_nonzero((ancestors1_array[i] - ancestors1_array[j]) == 0)
+
+				heat_data[j, i] = heat_data[i, j]
+
+				logger.debug(f"heat data = {heat_data[i, j]}")
+
+	#######################
+	# Build heat clustermap
+
+	if not jet2:
+
+		logger.info(f"{jet1['algorithm']} heat data ----  row: {jet1['algorithm']} -- alpha column: {jet1['algorithm']}")
+
+		sns.clustermap(
+			heat_data,
+			row_cluster=True,
+			col_cluster=True,
+			row_linkage=Heatjet["linkage_list"],
+			col_linkage=Heatjet["linkage_list"],
+		)
+
+		if FigName:
+			plt.savefig(str(FigName))
+
+		plt.show()
+
+	else:
+		logger.info(
+			f"{jet1['algorithm']} heat data ----  row: {jet2['algorithm']} -- alpha column: {jet1['algorithm']}")
+
+		sns.clustermap(
+			heat_data,
+			row_cluster=True,
+			col_cluster=True,
+			row_linkage=jet2["linkage_list"],
+			col_linkage=Heatjet["linkage_list"],
+		)
+
+		if FigName:
+			plt.savefig(str(FigName))
+
+		plt.show()
+
+
+
+
+
+
+
+
+
 
 
 
@@ -47,13 +170,18 @@ def heat_dendrogram(
 
 		if beamSearch_jet:
 
-			reclustjet = beamSearch.recluster(beamSearch_jet,
-			                     delta_min=beamSearch_jet["pt_cut"],
-			                     lam=beamSearch_jet["Lambda"],
-			                     beamSize = beamSize,
-			                     N_best= N_best,
-			                     save=False)[0]
-			ancestors = reclustjet["tree_ancestors"]
+			# Calculate linkage list and add it to the truth jet dict
+			linkageList.draw_truth(beamSearch_jet)
+
+			ancestors = beamSearch_jet["tree_ancestors"]
+
+			# reclustjet = beamSearch.recluster(beamSearch_jet,
+			#                      delta_min=beamSearch_jet["pt_cut"],
+			#                      lam=beamSearch_jet["Lambda"],
+			#                      beamSize = beamSize,
+			#                      N_best= N_best,
+			#                      save=False)[0]
+			# ancestors = reclustjet["tree_ancestors"]
 
 		if recluster_jet1:
 			# Recluster jet using itself as an input. This way, we use the constituents (leaves) as ordered in this jet and the tree_ancestors list for this algorithm. (Their leaves idx goes from 0 to N leaves in order when using jet 1 both as rows and colums)

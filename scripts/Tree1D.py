@@ -3,8 +3,8 @@ import numpy as np
 import logging
 
 from scripts import reclusterTree
-from scripts import reclustGreedyLH
-from scripts import beamSearch
+from scripts import N2Greedy
+from scripts import beamSearchOptimal as beamSearch
 from scripts.utils import get_logger
 
 logger = get_logger(level=logging.INFO)
@@ -277,7 +277,7 @@ def visualizeTreePair(
 			                                    alpha=int(alpha_jet2),
 			                                    save=False)
 
-			jetBottom = reclustGreedyLH.recluster(in_jet1,
+			jetBottom = N2Greedy.recluster(in_jet1,
 			                            delta_min=in_jet1["pt_cut"],
 			                            lam=in_jet1["Lambda"],
 			                            save=False)
@@ -285,9 +285,10 @@ def visualizeTreePair(
 			node_id = jetTop["node_id"]
 
 		elif in_jet2["algorithm"] == "greedyLH":
-			jetTop = reclustGreedyLH.recluster(in_jet1,
+			jetTop = N2Greedy.recluster(in_jet1,
 			                            delta_min = in_jet2["pt_cut"],
 			                            lam = in_jet2["Lambda"],
+										visualize = True,
 			                            save=False)
 
 			if in_jet1["algorithm"] == "beamSearch":
@@ -296,6 +297,7 @@ def visualizeTreePair(
 				                            lam=in_jet1["Lambda"],
 				                            beamSize = beamSize,
 				                            N_best=N_best,
+											visualize=True,
 				                            save=False)[0]
 
 			else:
@@ -311,6 +313,7 @@ def visualizeTreePair(
 				                            delta_min=in_jet2["pt_cut"],
 				                            lam=in_jet2["Lambda"],
 				                            beamSize = beamSize,
+											visualize = True,
 				                            N_best=N_best,
 				                            save=False)[0]
 

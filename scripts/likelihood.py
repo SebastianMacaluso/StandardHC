@@ -1,8 +1,8 @@
 import pickle
 import numpy as np
 import torch
-from showerSim import exp2DShowerTree
-from showerSim.utils import get_logger
+# from showerSim import exp2DShowerTree
+# from showerSim.utils import get_logger
 
 
 def get_delta_LR(pL, pR):
@@ -20,6 +20,36 @@ def get_delta_PC(p, pC):
 
 
 
+# def split_logLH(pL, delta_L, pR, delta_R, delta_min, lam):
+#     """
+#     Takes two edges (p, delta) and
+#     return the splitting that generated them (p, delta_P, phi)
+#     with its log likelihood
+#     """
+#     p = pR + pL
+#     delta_vec = (pR - pL) / 2
+#     phi = np.arctan(delta_vec[0] / delta_vec[1])
+#     delta_P = get_delta_LR(pL, pR)
+#
+#     def get_p(delta_P, delta, delta_min, lam):
+#         if delta > 0:
+#             r = delta / delta_P
+#             return np.log(lam) - lam * r
+#         else:
+#             r = delta_min / delta_P
+#             return np.log(1 - np.exp(-lam * r))
+#
+#     logLH = (
+#         get_p(delta_P, delta_L, delta_min, lam)
+#         + get_p(delta_P, delta_R, delta_min, lam)
+#         + np.log(1 / 2 / np.pi)
+#     )
+#
+#     return logLH, p, delta_P, phi
+
+
+
+
 def split_logLH(pL, delta_L, pR, delta_R, delta_min, lam):
     """
     Takes two edges (p, delta) and
@@ -28,16 +58,16 @@ def split_logLH(pL, delta_L, pR, delta_R, delta_min, lam):
     """
     p = pR + pL
     delta_vec = (pR - pL) / 2
-    phi = np.arctan(delta_vec[0] / delta_vec[1])
+    phi = np.arctan2(delta_vec[0], delta_vec[1])
     delta_P = get_delta_LR(pL, pR)
 
     def get_p(delta_P, delta, delta_min, lam):
         if delta > 0:
-            r = delta / delta_P
-            return np.log(lam) - lam * r
+            # r = delta / delta_P
+            return np.log(lam) - np.log(delta_P) - lam * delta / delta_P
         else:
-            r = delta_min / delta_P
-            return np.log(1 - np.exp(-lam * r))
+            # r = delta_min / delta_P
+            return np.log(1 - np.exp(-lam * delta_min / delta_P))
 
     logLH = (
         get_p(delta_P, delta_L, delta_min, lam)
@@ -46,6 +76,7 @@ def split_logLH(pL, delta_L, pR, delta_R, delta_min, lam):
     )
 
     return logLH, p, delta_P, phi
+
 
 
 
@@ -63,20 +94,95 @@ def Basic_split_logLH(pL, delta_L, pR, delta_R, delta_min, lam):
     # Get logLH
     def get_p(delta_P, delta, delta_min, lam):
         if delta > 0:
-            r = delta / delta_P
-            return np.log(lam) - lam * r
+            # r = delta / delta_P
+            return np.log(lam) - np.log(delta_P) - lam * delta / delta_P
         else:
-            r = delta_min / delta_P
-            return np.log(1 - np.exp(-lam * r))
+            """ We set Delta=0 if the node is a leaf """
+            # r = delta_min / delta_P
+            return np.log(1 - np.exp(-lam * delta_min / delta_P))
 
+    if delta_P < delta_min:
+        logLH = - np.inf
 
-    logLH = (
-        get_p(delta_P, delta_L, delta_min, lam)
-        + get_p(delta_P, delta_R, delta_min, lam)
-        + np.log(1 / 2 / np.pi)
-    )
+    else:
+
+        logLH = (
+            get_p(delta_P, delta_L, delta_min, lam)
+            + get_p(delta_P, delta_R, delta_min, lam)
+            + np.log(1 / 2 / np.pi)
+        )
 
     return logLH
+
+
+
+
+
+
+# def Basic_split_logLH(pL, delta_L, pR, delta_R, delta_min, lam):
+#     """
+#     Takes two edges (p, delta) and
+#     return the splitting that generated them (p, delta_P, phi)
+#     with its log likelihood
+#
+#     Note: Leaves in the Toy Generative Model are assigned Delta=-1
+#     """
+#
+#     delta_P = get_delta_LR(pL, pR)
+#
+#     # Get logLH
+#     def get_p(delta_P, delta, delta_min, lam):
+#         if delta > 0:
+#             r = delta / delta_P
+#             return np.log(lam) - lam * r
+#         else:
+#             r = delta_min / delta_P
+#             return np.log(1 - np.exp(-lam * r))
+#
+#     if delta_P < delta_min:
+#         logLH = - np.inf
+#
+#     else:
+#
+#         logLH = (
+#             get_p(delta_P, delta_L, delta_min, lam)
+#             + get_p(delta_P, delta_R, delta_min, lam)
+#             + np.log(1 / 2 / np.pi)
+#         )
+#
+#     return logLH
+
+
+
+
+# def Basic_split_logLH(pL, delta_L, pR, delta_R, delta_min, lam):
+#     """
+#     Takes two edges (p, delta) and
+#     return the splitting that generated them (p, delta_P, phi)
+#     with its log likelihood
+#
+#     Note: Leaves in the Toy Generative Model are assigned Delta=-1
+#     """
+#
+#     delta_P = get_delta_LR(pL, pR)
+#
+#     # Get logLH
+#     def get_p(delta_P, delta, delta_min, lam):
+#         if delta > 0:
+#             r = delta / delta_P
+#             return np.log(lam) - lam * r
+#         else:
+#             r = delta_min / delta_P
+#             return np.log(1 - np.exp(-lam * r))
+#
+#
+#     logLH = (
+#         get_p(delta_P, delta_L, delta_min, lam)
+#         + get_p(delta_P, delta_R, delta_min, lam)
+#         + np.log(1 / 2 / np.pi)
+#     )
+#
+#     return logLH
 
 
 
@@ -152,17 +258,26 @@ def enrich_jet_logLH(jet, root_id=0, Lambda=None, delta_min=None):
 def _get_jet_logLH(jet, root_id=None, Lambda=None, delta_min=None, logLH=None):
     """
     Recursively enrich every edge from root_id downward with their log likelihood.
-    log likelihood of a leave is 0. Assumes a valid jet.
+    log likelihood of a leaf is 0. Assumes a valid jet.
     """
     if jet["tree"][root_id][0] != -1:
+
+
         idL = jet["tree"][root_id][0]
         idR = jet["tree"][root_id][1]
         pL = jet["content"][idL]
         pR = jet["content"][idR]
         delta_L = jet["deltas"][idL]
         delta_R = jet["deltas"][idR]
-        llh, _ , _ , _ = split_logLH(pL, delta_L, pR, delta_R, delta_min, Lambda)
-        logLH.append(llh)
+
+        if float(jet["M_Hard"]) is not None and root_id == jet["root_id"]:
+
+            logLH.append(0)
+
+        else:
+
+            llh, _ , _ , _ = split_logLH(pL, delta_L, pR, delta_R, delta_min, Lambda)
+            logLH.append(llh)
 
         _get_jet_logLH(
             jet, root_id=idL, Lambda=Lambda, delta_min=delta_min, logLH=logLH
@@ -170,41 +285,43 @@ def _get_jet_logLH(jet, root_id=None, Lambda=None, delta_min=None, logLH=None):
         _get_jet_logLH(
             jet, root_id=idR, Lambda=Lambda, delta_min=delta_min, logLH=logLH
         )
+
     else:
+
         logLH.append(0)
 
 
-if __name__ == "__main__":
-
-    logger = get_logger()
-
-    simulator = exp2DShowerTree.Simulator(
-        jet_p=torch.tensor([800.0, 600.0]),
-        Mw=torch.tensor(80.0),
-        pt_cut=0.04,
-        Delta_0=60.0,
-        num_samples=1,
-    )
-    logger.info(f"Generating random jet")
-    jet_list = simulator(torch.tensor(4.0))
-
-    jet_dic = jet_list[0]
-
-    jet_dic_0 = {
-        "tree": jet_dic["tree"],
-        "content": jet_dic["content"],
-        "Lambda": jet_dic["Lambda"],
-        "pt_cut": jet_dic["pt_cut"],
-    }
-
-    fill_jet_info(jet_dic_0)
-    logger.info(f"Comparing deltas")
-    logger.info(f"deltas: {jet_dic['deltas']}")
-    logger.info(f"deltas: {jet_dic_0['deltas']}")
-    logger.info(f"Comparing draws")
-    logger.info(f"draws: {jet_dic['draws']}")
-    logger.info(f"draws: {jet_dic_0['draws']}")
-
-    enrich_jet_logLH(jet_dic_0)
-    logger.info(f"Top-down likelihood")
-    logger.info(f"logLH: {jet_dic_0['logLH']}")
+# if __name__ == "__main__":
+#
+#     logger = get_logger()
+#
+#     simulator = exp2DShowerTree.Simulator(
+#         jet_p=torch.tensor([800.0, 600.0]),
+#         Mw=torch.tensor(80.0),
+#         pt_cut=0.04,
+#         Delta_0=60.0,
+#         num_samples=1,
+#     )
+#     logger.info(f"Generating random jet")
+#     jet_list = simulator(torch.tensor(4.0))
+#
+#     jet_dic = jet_list[0]
+#
+#     jet_dic_0 = {
+#         "tree": jet_dic["tree"],
+#         "content": jet_dic["content"],
+#         "Lambda": jet_dic["Lambda"],
+#         "pt_cut": jet_dic["pt_cut"],
+#     }
+#
+#     fill_jet_info(jet_dic_0)
+#     logger.info(f"Comparing deltas")
+#     logger.info(f"deltas: {jet_dic['deltas']}")
+#     logger.info(f"deltas: {jet_dic_0['deltas']}")
+#     logger.info(f"Comparing draws")
+#     logger.info(f"draws: {jet_dic['draws']}")
+#     logger.info(f"draws: {jet_dic_0['draws']}")
+#
+#     enrich_jet_logLH(jet_dic_0)
+#     logger.info(f"Top-down likelihood")
+#     logger.info(f"logLH: {jet_dic_0['logLH']}")

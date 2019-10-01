@@ -180,9 +180,10 @@ def recluster(
 				Nleaves=len(jet_const),
 			)
 
+			jet["root_id"] = 0
 			jet["node_id"] = node_id
 			jet["tree"] = np.asarray(tree).reshape(-1, 2)
-			jet["content"] = np.asarray(jetContent).reshape(-1, 2)
+			jet["content"] = np.asarray(content).reshape(-1, 2)
 			jet["tree_ancestors"] = tree_ancestors
 
 

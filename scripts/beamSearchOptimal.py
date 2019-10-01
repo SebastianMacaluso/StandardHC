@@ -147,6 +147,8 @@ def recluster(
 		delta_min = delta_min,
 		lam = lam,
 		beamSize = beamSize,
+		M_Hard = float(jet_dic["M_Hard"]),
+
 	)
 
 
@@ -163,6 +165,7 @@ def recluster(
 		jet["linkage_list"]=path.linkage_list
 		jet["Nconst"]=len(jet_const)
 		jet["algorithm"]= "beamSearch"
+		jet["M_Hard"] = float(jet_dic["M_Hard"])
 		jet["pt_cut"] = delta_min
 		jet["Lambda"] = lam
 		jet["logLH"] = np.asarray(path.logLH)
@@ -182,10 +185,12 @@ def recluster(
 				Nleaves=len(jet_const),
 			)
 
+			jet["root_id"] = 0
 			jet["node_id"] = node_id
 			jet["tree"] = np.asarray(tree).reshape(-1, 2)
-			jet["content"] = np.asarray(jetContent).reshape(-1, 2)
+			jet["content"] = np.asarray(content).reshape(-1, 2)
 			jet["tree_ancestors"] = tree_ancestors
+
 
 
 		jetsList.append(jet)
@@ -223,6 +228,7 @@ def beamSearch(
 		delta_min = None,
 		lam = None,
 		beamSize = None,
+		M_Hard = None,
 ):
 	"""
 	Runs a beam search algorithm to cluster the jet constituents
@@ -297,16 +303,51 @@ def beamSearch(
 
 		total_levelLatentPaths = []
 
-		for j in range(len(predecessors)):
+		if level == (Nconst - 2) and M_Hard is not None:
 
-			""" Append to list: (beamIdx, sumLogLH, MaxPairIdx, pairlogLH) """
-			levelLatentPaths = [
-				(int(j), x + np.sum(predecessors[j].logLH), y, x)
-				for (x, y) in predecessors[j].sortPairs[-beamSize::]
-			]
+			for j in range(len(predecessors)):
 
-			"""Append latent path  => we get a final list of beamSize^2 latent paths)"""
-			total_levelLatentPaths = total_levelLatentPaths + levelLatentPaths
+				levelLatentPaths = [
+					(int(j), 0. + np.sum(predecessors[j].logLH), y, 0.)
+					for (x, y) in predecessors[j].sortPairs[-beamSize::]
+				]
+
+				"""Append latent path  => we get a final list of beamSize^2 latent paths)"""
+				total_levelLatentPaths = total_levelLatentPaths + levelLatentPaths
+
+		else:
+
+			for j in range(len(predecessors)):
+
+				levelLatentPaths = [
+					(int(j), x + np.sum(predecessors[j].logLH), y, x)
+					for (x, y) in predecessors[j].sortPairs[-beamSize::]
+				]
+
+
+				"""Append latent path  => we get a final list of beamSize^2 latent paths)"""
+				total_levelLatentPaths = total_levelLatentPaths + levelLatentPaths
+
+
+		# for j in range(len(predecessors)):
+		#
+		# 	""" Append to list: (beamIdx, sumLogLH, MaxPairIdx, pairlogLH) """
+		# 	if level == (Nconst - 2) and M_Hard is not None:
+		#
+		# 		levelLatentPaths = [
+		# 			(int(j), 0. + np.sum(predecessors[j].logLH), y, 0.)
+		# 			for (x, y) in predecessors[j].sortPairs[-beamSize::]
+		# 		]
+		#
+		# 	else:
+		#
+		# 		levelLatentPaths = [
+		# 			(int(j), x + np.sum(predecessors[j].logLH), y, x)
+		# 			for (x, y) in predecessors[j].sortPairs[-beamSize::]
+		# 		]
+		#
+		# 	"""Append latent path  => we get a final list of beamSize^2 latent paths)"""
+		# 	total_levelLatentPaths = total_levelLatentPaths + levelLatentPaths
 
 
 		logger.debug(f" Lenght total_levelLatentPaths = {len(total_levelLatentPaths)}")
