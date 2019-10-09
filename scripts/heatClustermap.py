@@ -5,7 +5,6 @@ import logging
 import copy
 
 from scripts import linkageList
-from scripts import BSlinkageList
 from scripts import reclusterTree
 from scripts import beamSearchOptimal as beamSearch
 from scripts.utils import get_logger
@@ -90,28 +89,30 @@ def HeatDendrogram(
 	#######################
 	# Build heat clustermap
 
+
 	if not jet2:
 
 		logger.info(f"{jet1['algorithm']} heat data ----  row: {jet1['algorithm']} -- alpha column: {jet1['algorithm']}")
 
-		sns.clustermap(
+		cm = sns.clustermap(
 			heat_data,
 			row_cluster=True,
 			col_cluster=True,
 			row_linkage=Heatjet["linkage_list"],
 			col_linkage=Heatjet["linkage_list"],
+
 		)
 
 		if FigName:
 			plt.savefig(str(FigName))
 
-		plt.show()
+		# plt.show()
 
 	else:
 		logger.info(
 			f"{jet1['algorithm']} heat data ----  row: {jet2['algorithm']} -- alpha column: {jet1['algorithm']}")
 
-		sns.clustermap(
+		cm = sns.clustermap(
 			heat_data,
 			row_cluster=True,
 			col_cluster=True,
@@ -122,8 +123,22 @@ def HeatDendrogram(
 		if FigName:
 			plt.savefig(str(FigName))
 
-		plt.show()
+		# plt.show()
 
+	# ax = cm.fig.gca()
+	ax = cm.ax_heatmap
+	ax.set_xlabel(r"%s"%jet1['algorithm'], fontsize=15)
+
+	if not jet2:
+		ax.set_ylabel(r"%s"%jet1['algorithm'], fontsize=15)
+	else:
+		ax.set_ylabel(r"%s" % jet2['algorithm'], fontsize=15)
+
+
+	ax.xaxis.set_label_coords(0.5, 1.3)
+	ax.yaxis.set_label_coords(-0.3, 0.5)
+	# ax.yaxis.labelpad = -1000
+	plt.show()
 
 
 

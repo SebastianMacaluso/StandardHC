@@ -107,7 +107,13 @@ def recluster(input_jet, alpha=None, save=True, out_dir = None):
   jet["node_id"]=node_id
   jet["tree_ancestors"]=tree_ancestors
   jet["Nconst"]=Nconst
-  jet["algorithm"]=alpha
+
+  if alpha==1:
+    jet["algorithm"]="Kt"
+  elif alpha == -1:
+    jet["algorithm"] = "Anti-kt"
+  elif alpha == 0:
+    jet["algorithm"] = "CA"
 
 
   # Save reclustered tree

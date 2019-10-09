@@ -142,6 +142,7 @@ def recluster(
 	jet["algorithm"]= "greedyLH"
 	jet["pt_cut"] = delta_min
 	jet["Lambda"] = lam
+	jet["M_Hard"] = float(input_jet["M_Hard"])
 	jet["logLH"] = np.asarray(logLH)
 
 
@@ -263,12 +264,6 @@ def greedyLH(levelContent, delta_min= None, lam=None, M_Hard = None):
 			lam = lam,
 		)
 
-	# logger.info(f" log LH list before setting last merging likelihood to 1 = {logLH}")
-	if M_Hard is not None:
-
-		logLH[-1]=0
-
-	# logger.info(f" log LH list after setting last merging likelihood to 1 = {logLH}")
 
 	return jetTree, idx, jetContent, root_node, Nconst, N_leaves_list, linkage_list, logLH
 

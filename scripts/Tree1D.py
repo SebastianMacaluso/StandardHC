@@ -132,7 +132,7 @@ def plotBinaryTree(
 	# Sort the leaves to match the order in which they are accessed when traverseing a tree from some other clustering algorithm (or truth jet).
 	# The order is in node_id_in.
 	if node_id_in:
-		if not truthOrder and jet["algorithm"] == "truth":
+		if not truthOrder and jet["algorithm"] == "Truth":
 			outers = [outers[k] for k in node_id_in]
 		else:
 			new_idx_list = list(zip(outers, node_id_in))
@@ -200,6 +200,8 @@ def plotBinaryTree(
 	# Add leaves to main graph
 	dot.subgraph(leaves)
 
+	# dot.attr(label=r'%s'%jet["algorithm"],labelloc = "t", fontsize='100')
+	# dot.attr(fontsize='20')
 
 	return dot
 
@@ -241,7 +243,7 @@ def visualizeTreePair(
 	'''
 
 	if truthOrder:
-		if in_jet1["algorithm"] == "truth":
+		if in_jet1["algorithm"] == "Truth":
 			jetTop = in_jet2
 			jetBottom = in_jet1
 		else:
@@ -251,21 +253,21 @@ def visualizeTreePair(
 		node_id = jetTop["node_id"]
 
 	else:
-		if in_jet1["algorithm"] == "truth":
+		if in_jet1["algorithm"] == "Truth":
 			jetTop = in_jet1
 			jetBottom = in_jet2
 
 			node_id = jetBottom["node_id"]
 
-		elif in_jet2["algorithm"] == "truth":
+		elif in_jet2["algorithm"] == "Truth":
 			jetTop = in_jet2
 			jetBottom = in_jet1
 
 			node_id = jetBottom["node_id"]
 
-		elif in_jet1["algorithm"] == "greedyLH":
+		elif in_jet1["algorithm"] == "Greedy":
 
-			if in_jet2["algorithm"] == "beamSearch":
+			if in_jet2["algorithm"] == "Beam Search":
 				jetTop = beamSearch.recluster(in_jet1,
 				                            delta_min=in_jet2["pt_cut"],
 				                            lam=in_jet2["Lambda"],
@@ -284,14 +286,14 @@ def visualizeTreePair(
 
 			node_id = jetTop["node_id"]
 
-		elif in_jet2["algorithm"] == "greedyLH":
+		elif in_jet2["algorithm"] == "Greedy":
 			jetTop = N2Greedy.recluster(in_jet1,
 			                            delta_min = in_jet2["pt_cut"],
 			                            lam = in_jet2["Lambda"],
 										visualize = True,
 			                            save=False)
 
-			if in_jet1["algorithm"] == "beamSearch":
+			if in_jet1["algorithm"] == "Beam Search":
 				jetBottom = beamSearch.recluster(in_jet1,
 				                            delta_min=in_jet1["pt_cut"],
 				                            lam=in_jet1["Lambda"],
@@ -308,7 +310,7 @@ def visualizeTreePair(
 			node_id = jetTop["node_id"]
 
 		else:
-			if in_jet2["algorithm"] == "beamSearch":
+			if in_jet2["algorithm"] == "Beam Search":
 				jetTop = beamSearch.recluster(in_jet1,
 				                            delta_min=in_jet2["pt_cut"],
 				                            lam=in_jet2["Lambda"],

@@ -303,30 +303,30 @@ def beamSearch(
 
 		total_levelLatentPaths = []
 
-		if level == (Nconst - 2) and M_Hard is not None:
+		# if level == (Nconst - 2) and M_Hard is not None:
+		#
+		# 	for j in range(len(predecessors)):
+		#
+		# 		levelLatentPaths = [
+		# 			(int(j), 0. + np.sum(predecessors[j].logLH), y, 0.)
+		# 			for (x, y) in predecessors[j].sortPairs[-beamSize::]
+		# 		]
+		#
+		# 		"""Append latent path  => we get a final list of beamSize^2 latent paths)"""
+		# 		total_levelLatentPaths = total_levelLatentPaths + levelLatentPaths
+		#
+		# else:
 
-			for j in range(len(predecessors)):
+		for j in range(len(predecessors)):
 
-				levelLatentPaths = [
-					(int(j), 0. + np.sum(predecessors[j].logLH), y, 0.)
-					for (x, y) in predecessors[j].sortPairs[-beamSize::]
-				]
-
-				"""Append latent path  => we get a final list of beamSize^2 latent paths)"""
-				total_levelLatentPaths = total_levelLatentPaths + levelLatentPaths
-
-		else:
-
-			for j in range(len(predecessors)):
-
-				levelLatentPaths = [
-					(int(j), x + np.sum(predecessors[j].logLH), y, x)
-					for (x, y) in predecessors[j].sortPairs[-beamSize::]
-				]
+			levelLatentPaths = [
+				(int(j), x + np.sum(predecessors[j].logLH), y, x)
+				for (x, y) in predecessors[j].sortPairs[-beamSize::]
+			]
 
 
-				"""Append latent path  => we get a final list of beamSize^2 latent paths)"""
-				total_levelLatentPaths = total_levelLatentPaths + levelLatentPaths
+			"""Append latent path  => we get a final list of beamSize^2 latent paths)"""
+			total_levelLatentPaths = total_levelLatentPaths + levelLatentPaths
 
 
 		# for j in range(len(predecessors)):

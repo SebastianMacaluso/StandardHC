@@ -1,0 +1,39 @@
+\providecommand{\href}[2]{#2}\begingroup\raggedright\begin{thebibliography}{1}
+
+\bibitem{ToyJetsShowerPackage}
+{K. Cranmer, S. Macaluso, D. Pappadopulo}, ``{Toy Generative Model for Jets
+  Package}.''
+\newblock \url{https://github.com/SebastianMacaluso/ToyJetsShower}.
+
+\bibitem{ToyJetsShower}
+{K. Cranmer, S. Macaluso, D. Pappadopulo}, ``{Toy Generative Model for Jets}.''
+\newblock
+  \url{https://github.com/SebastianMacaluso/ToyJetsShower/blob/master/notes/toyshower_v4.pdf}.
+
+\bibitem{Brehmer:2018kdj}
+J.~Brehmer, K.~Cranmer, G.~Louppe, and J.~Pavez, ``{Constraining Effective
+  Field Theories with Machine Learning},''
+  \href{http://dx.doi.org/10.1103/PhysRevLett.121.111801}{{\em Phys. Rev.
+  Lett.} {\bfseries 121} no.~11, (2018) 111801},
+\href{http://arxiv.org/abs/1805.00013}{{\ttfamily arXiv:1805.00013 [hep-ph]}}.
+%%CITATION = ARXIV:1805.00013;%%.
+
+\bibitem{TreeAlgorithms}
+{K. Cranmer, S. Macaluso, D. Pappadopulo}, ``{Clustering algorithms for jet
+  physics}.''
+\newblock \url{https://github.com/SebastianMacaluso/ReclusterTreeAlgorithms}.
+
+\bibitem{VisualizeBinaryTrees}
+{K. Cranmer, S. Macaluso, D. Pappadopulo}, ``{Visualize Binary Trees
+  Package}.''
+\newblock \url{https://github.com/SebastianMacaluso/VisualizeBinaryTrees}.
+
+\bibitem{Ellis:2012sn}
+S.~D. Ellis, A.~Hornig, T.~S. Roy, D.~Krohn, and M.~D. Schwartz, ``{Qjets: A
+  Non-Deterministic Approach to Tree-Based Jet Substructure},''
+  \href{http://dx.doi.org/10.1103/PhysRevLett.108.182003}{{\em Phys. Rev.
+  Lett.} {\bfseries 108} (2012) 182003},
+\href{http://arxiv.org/abs/1201.1914}{{\ttfamily arXiv:1201.1914 [hep-ph]}}.
+%%CITATION = ARXIV:1201.1914;%%.
+
+\end{thebibliography}\endgroup
