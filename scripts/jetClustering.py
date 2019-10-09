@@ -4,6 +4,7 @@ import pickle
 import time
 import importlib
 import copy
+import argparse
 
 from scripts import reclusterTree
 from scripts import linkageList
@@ -21,6 +22,11 @@ logger = get_logger(level=logging.INFO)
 
 
 data_dir="data/"
+
+
+
+
+"""####################################"""
 
 def appendTruthJets(start, end, Njets):
     """ Load truth trees and create logLH lists """
@@ -200,7 +206,7 @@ def fill_GreedyList(input_jets, Nbest=1, k1=0, k2=2):
                      jets logLH
     """
 
-    input_dir = "data/truth/"
+    input_dir = data_dir+"truth/"
 
     with open(input_dir + str(input_jets) + '.pkl', "rb") as fd:
         truth_jets = pickle.load(fd, encoding='latin-1')[k1:k2]
@@ -261,3 +267,103 @@ def fill_BSList(input_jets, Nbest=1, k1=0, k2=2):
     BSO_jetsListLogLH = [sum(jet["logLH"]) for jet in BSO_jetsList]
 
     return BSO_jetsList, BSO_jetsListLogLH
+
+
+
+
+if __name__ == "__main__":
+
+    # def runGreedy_Scan(start, end, Njets):
+    #     """ Run greedy algorithm"""
+    #
+    #     for i in range(start, end):
+    #         jetsList, jetsListLogLH = fill_GreedyList("tree_" + str(Njets) + "_truth_" + str(i), k1=0,
+    #                                                   k2=Njets)
+    #
+    #         with open(data_dir + "GreedyJets/Greedy_" + str(Njets) + "Mw_" + str(i) + ".pkl", "wb") as f:
+    #             pickle.dump((jetsList, jetsListLogLH), f)
+    #
+    #
+    # def runBSO_Scan(start, end, Njets):
+    #     """ Run beam search algorithm"""
+    #
+    #     for i in range(start, end):
+    #         BSO_jetsList, BSO_jetsListLogLH = fill_BSList("tree_" + str(Njets) + "_truth_" + str(i), k1=0,
+    #                                                       k2=Njets)
+    #
+    #         with open(data_dir + "BeamSearchJets/BSO_" + str(Njets) + "Mw_" + str(i) + ".pkl", "wb") as f:
+    #             pickle.dump((BSO_jetsList, BSO_jetsListLogLH), f)
+
+    def runGreedy_Scan(i, Njets):
+        """ Run greedy algorithm"""
+
+        jetsList, jetsListLogLH = fill_GreedyList("tree_" + str(Njets) + "_truth_" + str(i), k1=0,
+                                                  k2=Njets)
+
+        with open(data_dir + "GreedyJets/Greedy_" + str(Njets) + "Mw_" + str(i) + ".pkl", "wb") as f:
+            pickle.dump((jetsList, jetsListLogLH), f)
+
+
+    def runBSO_Scan(i, Njets):
+        """ Run beam search algorithm"""
+
+        BSO_jetsList, BSO_jetsListLogLH = fill_BSList("tree_" + str(Njets) + "_truth_" + str(i), k1=0,
+                                                      k2=Njets)
+
+        with open(data_dir + "BeamSearchJets/BSO_" + str(Njets) + "Mw_" + str(i) + ".pkl", "wb") as f:
+            pickle.dump((BSO_jetsList, BSO_jetsListLogLH), f)
+
+
+
+
+    parser = argparse.ArgumentParser(description="Run Greedy and Beam Search algorithms")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Increase output verbosity"
+    )
+
+    parser.add_argument(
+        "--data_dir", type=str, default="../data/", help="Flag to run beam seach clustering"
+    )
+
+    parser.add_argument(
+        "--greedyScan", type=str, default="False", help="Flag to run greedy clustering"
+    )
+    parser.add_argument(
+        "--BSScan", type=str, default="False", help="Flag to run beam seach clustering"
+    )
+
+    parser.add_argument(
+        "--id", type=str, default=0, help="dataset id"
+    )
+
+    parser.add_argument(
+        "--N_jets", type=str, default=2, help="# of jets in each dataset"
+    )
+
+    logger = get_logger(level=logging.INFO)
+
+    args = parser.parse_args()
+
+    data_dir = args.data_dir
+
+    # To test:
+    # Nstart = 0
+    # Nend = 4
+    # N_jets = 2
+
+    # Full dataset
+    # Nstart = 10
+    # Nend = 30
+    # N_jets = 500
+
+    """We ran a scan for 30 sets of 500 jets each."""
+    if args.greedyScan == "True":
+        runGreedy_Scan(args.id, args.N_jets)
+        # runGreedy_Scan(Nstart, Nend, N_jets)
+
+
+
+    """We ran a scan for 10 sets of 500 jets each. (Below as an example there is a scan for 4 sets of 2 jets each)"""
+    if args.BSScan == "True":
+        runBSO_Scan(args.id, args.N_jets)
+        # runBSO_Scan(Nstart, Nend, N_jets)
