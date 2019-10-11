@@ -10,6 +10,7 @@ import bisect
 
 from scripts import likelihood
 from scripts import N2Greedy
+from scripts import auxFunctions
 
 from scripts.utils import get_logger
 
@@ -191,6 +192,16 @@ def recluster(
 			jet["content"] = np.asarray(content).reshape(-1, 2)
 			jet["tree_ancestors"] = tree_ancestors
 
+		""" Fill deltas list (needed to fill the jet log LH)"""
+		jet = likelihood.fill_jet_info(jet, parent_id=None)
+
+		"""Fill jet dictionaries with log likelihood of truth jet"""
+		jet = likelihood.enrich_jet_logLH(jet, dij=True)
+
+		""" Angular quantities"""
+		ConstPhi, PhiDelta = auxFunctions.traversePhi(jet, jet["root_id"], [], [])
+		jet["ConstPhi"] = ConstPhi
+		jet["PhiDelta"] = PhiDelta
 
 
 		jetsList.append(jet)

@@ -7,6 +7,8 @@ import time
 import copy
 
 from scripts import likelihood
+from scripts import auxFunctions
+
 from scripts.utils import get_logger
 
 logger = get_logger(level=logging.INFO)
@@ -144,6 +146,19 @@ def recluster(
 	jet["Lambda"] = lam
 	jet["M_Hard"] = float(input_jet["M_Hard"])
 	jet["logLH"] = np.asarray(logLH)
+
+
+	""" Fill deltas list (needed to fill the jet log LH)"""
+	jet = likelihood.fill_jet_info(jet, parent_id=None)
+
+	"""Fill jet dictionaries with log likelihood of truth jet"""
+	jet = likelihood.enrich_jet_logLH(jet, dij=True)
+
+
+	""" Angular quantities"""
+	ConstPhi, PhiDelta = auxFunctions.traversePhi(jet, jet["root_id"], [], [])
+	jet["ConstPhi"] = ConstPhi
+	jet["PhiDelta"] = PhiDelta
 
 
 	logger.debug(f" Recluster and build tree algorithm total time = {time.time()  - start_time}")

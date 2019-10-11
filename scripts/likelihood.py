@@ -103,6 +103,7 @@ def fill_jet_info(jet, parent_id=None):
     jet["deltas"] = deltas
     jet["draws"] = draws
 
+    return jet
 
 def _get_jet_info(jet, root_id=None, parent_id=None, deltas=None, draws=None):
     """
@@ -169,6 +170,7 @@ def enrich_jet_logLH(jet, Lambda=None, delta_min=None, dij=False, alpha = None):
     jet["logLH"] = np.asarray(logLH)
     jet["dij"] = dijList
 
+    return jet
 
 
 def _get_jet_logLH(
@@ -208,17 +210,19 @@ def _get_jet_logLH(
         if dij:
 
             """ dij=min(pTi^(2 alpha),pTj^(2 alpha)) * [arccos((pi.pj)/|pi|*|pj|)]^2 """
-            epsilon = 1e-6  # For numerical stability
+            # epsilon = 1e-6  # For numerical stability
             dijs= [float(llh)]
 
             for alpha in [-1,0,1]:
+
+                tempCos = np.dot(pL, pR) / (np.linalg.norm(pL) * np.linalg.norm(pR))
+                if abs(tempCos) > 1: tempCos = np.sign(tempCos)
+
                 dijVal = np.sort((np.abs([pL[0],pR[0]])) ** (2 * alpha))[0]  * \
                          (
-                             np.arccos(
-                                 np.dot(pL, pR) /
-                                    (epsilon + np.linalg.norm(pL) * np.linalg.norm(pR))
-                             )
+                             np.arccos(tempCos)
                           ) ** 2
+
                 dijs.append(dijVal)
 
             dijList.append(dijs)

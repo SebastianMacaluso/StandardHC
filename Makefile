@@ -1,4 +1,4 @@
-# Makefile for ReclusterTreeAlgorithms
+# Makefile for TreeAlgorithms
 SHELL := /bin/bash
 
 # You can set these variables from the commandline.

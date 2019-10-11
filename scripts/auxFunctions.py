@@ -19,15 +19,9 @@ from matplotlib import colors
 from matplotlib.patches import Ellipse
 from matplotlib import gridspec
 
-from scripts import reclusterTree
-from scripts import linkageList
-from scripts import heatClustermap
-from scripts import Tree1D
+
 from scripts import likelihood
-from scripts import beamsearchTJS
-from scripts import N2Greedy
-from scripts import beamSearch as bs
-from scripts import beamSearchOptimal as BSO
+
 from scripts.utils import get_logger
 
 logger = get_logger(level=logging.INFO)
@@ -44,7 +38,7 @@ def deltaRootCut(start, end, in_truth_Dic, in_Greedy_Dic, in_BSO_Dic, Width=0):
 
     M_hard = truthDic["jetsList"][0][0]["M_Hard"]
 
-    for k in range(start, end):
+    for k in range(end-start):
         truthJets = []
         GreedyJets = []
         BSJets = []
@@ -77,14 +71,17 @@ def jetsLogLH(start, end, Dic):
     avg_logLH = []
     jetsList = []
 
-    for k in range(start, end):
+    for k in range(end-start):
 
+        # if len(Dic["jetsList"][k])>1:
+        #     print("k=",k)
         jetsListLogLH = [np.sum(jet["logLH"]) for jet in Dic["jetsList"][k] ]
 
         jetsList += Dic["jetsList"][k]
         Total_jetsListLogLH+=jetsListLogLH
-        avg_logLH.append(np.average(jetsListLogLH))
 
+        if (k+1)%50==0:
+            avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[k-49:k+1]).flatten()))
 
     """ Standard deviation for the average log LH for the N runs"""
     sigma = np.std(avg_logLH)
@@ -271,6 +268,40 @@ def scanJets(DicList, angles=False, dijmetrics=False):
 
     return jetDic
 
+
+
+def scanAngles(DicList):
+    JetsConstPhi = []
+    JetsPhiDelta = []
+
+    for jet in DicList["jetsList"].flatten():
+
+        JetsConstPhi = JetsConstPhi + jet["ConstPhi"]
+        JetsPhiDelta = JetsPhiDelta + jet["PhiDelta"]
+
+    DicList["JetsConstPhi"] = JetsConstPhi
+    DicList["JetsPhiDelta"] = JetsPhiDelta
+
+    return DicList
+
+
+
+def scanDij(DicList):
+
+    dij = []
+    dijSubjets = []
+
+    for jet in DicList["jetsList"].flatten():
+
+        """ dij vs logLH"""
+        dij = dij + jet["dij"]
+        dijSubjets = dijSubjets + [jet["dij"][0]]
+
+
+    DicList["dijs"] = np.transpose(dij)
+    DicList["dijSubjets"] = np.transpose(dijSubjets)
+
+    return DicList
 
 
 

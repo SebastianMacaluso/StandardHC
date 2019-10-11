@@ -5,15 +5,13 @@ import time
 import importlib
 import copy
 import argparse
+import os
 
 from scripts import reclusterTree
 from scripts import linkageList
 from scripts import heatClustermap
-from scripts import Tree1D
 from scripts import likelihood
-from scripts import beamsearchTJS
 from scripts import N2Greedy
-from scripts import beamSearch as bs
 from scripts import beamSearchOptimal as BSO
 from scripts.utils import get_logger
 
@@ -21,7 +19,7 @@ logger = get_logger(level=logging.INFO)
 
 
 
-data_dir="data/"
+data_dir="/scratch/sm4511/TreeAlgorithms/data/"
 
 
 
@@ -31,6 +29,8 @@ data_dir="data/"
 def appendTruthJets(start, end, Njets):
     """ Load truth trees and create logLH lists """
 
+    startTime = time.time()
+
     dic = {}
 
     Total_jetsList = []
@@ -39,20 +39,24 @@ def appendTruthJets(start, end, Njets):
     # Nconst = []
 
     for i in range(start, end):
-        with open(data_dir+"truth/tree_" + str(Njets) + "_truth_" + str(i) + ".pkl", "rb") as fd:
+        with open(data_dir+"Truth/tree_" + str(Njets) + "_truth_" + str(i) + ".pkl", "rb") as fd:
             jetsList = pickle.load(fd, encoding='latin-1')
 
         # """Number of jet constituents"""
         # Nconst.append([len(jet["leaves"]) for jet in jetsList])
 
-        """Fill jet dictionaries with log likelihood of truth jet"""
-        [likelihood.enrich_jet_logLH(jet, dij=True) for jet in jetsList]
+        # """Fill jet dictionaries with log likelihood of truth jet"""
+        # [likelihood.enrich_jet_logLH(jet, dij=True) for jet in jetsList]
 
         enrichTruthLogLH = [np.sum(jet["logLH"]) for jet in jetsList]
 
         Total_jetsList.append(jetsList)
         Total_jetsListLogLH.append(enrichTruthLogLH)
-        avg_logLH.append(np.average(enrichTruthLogLH))
+
+        if (i+1)%20==0:
+            avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[i-19:i+1]).flatten()))
+
+    # print("lenght avg_logLH = ", len(avg_logLH))
 
     """ Standard deviation for the average log LH for the N runs"""
     sigma = np.std(avg_logLH)
@@ -67,6 +71,8 @@ def appendTruthJets(start, end, Njets):
     dic["avgLogLH"] = np.asarray(avg_logLH)
     dic["sigma"] = sigma
     dic["statSigma"] = statSigma
+
+    logger.info(f" TOTAL TIME = {time.time() - startTime}")
 
     return dic
 
@@ -86,22 +92,23 @@ def appendGreedyJets(start, end, Njets):
     avg_logLH = []
     for i in range(start, end):
         with open(data_dir+"GreedyJets/Greedy_" + str(Njets) + "Mw_" + str(i) + ".pkl", "rb") as fd:
-            jetsList, _ = pickle.load(fd, encoding='latin-1')
+            jetsList, jetsListLogLH = pickle.load(fd, encoding='latin-1')
 
-        """ Fill deltas list (needed to fill the jet log LH)"""
-        [traverseTree(jet) for jet in jetsList]
+        # """ Fill deltas list (needed to fill the jet log LH)"""
+        # [traverseTree(jet) for jet in jetsList]
 
-        [likelihood.fill_jet_info(jet, parent_id=None) for jet in jetsList]
+        # [likelihood.fill_jet_info(jet, parent_id=None) for jet in jetsList]
+        #
+        # """Fill jet dictionaries with log likelihood of truth jet"""
+        # [likelihood.enrich_jet_logLH(jet, dij=True) for jet in jetsList]
 
-        """Fill jet dictionaries with log likelihood of truth jet"""
-        [likelihood.enrich_jet_logLH(jet, dij=True) for jet in jetsList]
-
-        jetsListLogLH = [np.sum(jet["logLH"]) for jet in jetsList]
+        # jetsListLogLH = [np.sum(jet["logLH"]) for jet in jetsList]
 
         Total_jetsList.append(jetsList)
         Total_jetsListLogLH.append(jetsListLogLH)
-        avg_logLH.append(np.average(jetsListLogLH))
 
+        if (i+1)%20==0:
+            avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[i-19:i+1]).flatten()))
 
     """ Standard deviation for the average log LH for the N runs"""
     sigma = np.std(avg_logLH)
@@ -136,23 +143,24 @@ def appendBSO_Scan(start, end, Njets):
     avg_logLH = []
     for i in range(start, end):
         with open(data_dir+"BeamSearchJets/BSO_" + str(Njets) + "Mw_" + str(i) + ".pkl", "rb") as fd:
-            jetsList, _ = pickle.load(fd, encoding='latin-1')
+            jetsList, jetsListLogLH = pickle.load(fd, encoding='latin-1')
 
-        """ Fill deltas list (needed to fill the jet log LH)"""
-        [traverseTree(jet) for jet in jetsList]
+        # """ Fill deltas list (needed to fill the jet log LH)"""
+        # [traverseTree(jet) for jet in jetsList]
 
-        [likelihood.fill_jet_info(jet, parent_id=None) for jet in jetsList]
+        # [likelihood.fill_jet_info(jet, parent_id=None) for jet in jetsList]
+        #
+        # """Fill jet dictionaries with log likelihood of truth jet"""
+        # [likelihood.enrich_jet_logLH(jet, dij=True) for jet in jetsList]
 
-        """Fill jet dictionaries with log likelihood of truth jet"""
-        [likelihood.enrich_jet_logLH(jet, dij=True) for jet in jetsList]
-
-        jetsListLogLH = [np.sum(jet["logLH"]) for jet in jetsList]
+        # jetsListLogLH = [np.sum(jet["logLH"]) for jet in jetsList]
 
 
         Total_jetsList.append(jetsList)
         Total_jetsListLogLH.append(jetsListLogLH)
-        avg_logLH.append(np.average(jetsListLogLH))
 
+        if (i+1)%20==0:
+            avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[i-19:i+1]).flatten()))
 
     """ Standard deviation for the average log LH for the N runs"""
     sigma = np.std(avg_logLH)
@@ -175,24 +183,24 @@ def appendBSO_Scan(start, end, Njets):
 
 
 
-def traverseTree(jet):
-
-    """ Traverse jet to get ancestors list  and content list starting from the root node"""
-    tree, \
-    content, \
-    node_id, \
-    tree_ancestors = N2Greedy._traverse(
-        jet["root_id"],
-        jet["content"],
-        jetTree=jet["tree"],
-        Nleaves=jet["Nconst"],
-    )
-
-    jet["root_id"] = 0
-    jet["node_id"] = node_id
-    jet["tree"] = np.asarray(tree).reshape(-1, 2)
-    jet["content"] = np.asarray(content).reshape(-1, 2)
-    jet["tree_ancestors"] = tree_ancestors
+# def traverseTree(jet):
+#
+#     """ Traverse jet to get ancestors list  and content list starting from the root node"""
+#     tree, \
+#     content, \
+#     node_id, \
+#     tree_ancestors = N2Greedy._traverse(
+#         jet["root_id"],
+#         jet["content"],
+#         jetTree=jet["tree"],
+#         Nleaves=jet["Nconst"],
+#     )
+#
+#     jet["root_id"] = 0
+#     jet["node_id"] = node_id
+#     jet["tree"] = np.asarray(tree).reshape(-1, 2)
+#     jet["content"] = np.asarray(content).reshape(-1, 2)
+#     jet["tree_ancestors"] = tree_ancestors
 
 
 
@@ -206,9 +214,9 @@ def fill_GreedyList(input_jets, Nbest=1, k1=0, k2=2):
                      jets logLH
     """
 
-    input_dir = data_dir+"truth/"
 
-    with open(input_dir + str(input_jets) + '.pkl', "rb") as fd:
+
+    with open(args.data_dir + str(input_jets) + '.pkl', "rb") as fd:
         truth_jets = pickle.load(fd, encoding='latin-1')[k1:k2]
 
     startTime = time.time()
@@ -217,7 +225,7 @@ def fill_GreedyList(input_jets, Nbest=1, k1=0, k2=2):
         truth_jet,
         delta_min=truth_jet["pt_cut"],
         lam=float(truth_jet["Lambda"]),
-        visualize=False,
+        visualize = True,
     ) for truth_jet in truth_jets]
 
     print("TOTAL TIME = ", time.time() - startTime)
@@ -234,9 +242,9 @@ def fill_BSList(input_jets, Nbest=1, k1=0, k2=2):
                      jets logLH
     """
 
-    input_dir = "data/truth/"
 
-    with open(input_dir + str(input_jets) + '.pkl', "rb") as fd:
+
+    with open(args.data_dir + str(input_jets) + '.pkl', "rb") as fd:
         truth_jets = pickle.load(fd, encoding='latin-1')[k1:k2]
 
     startTime = time.time()
@@ -259,6 +267,7 @@ def fill_BSList(input_jets, Nbest=1, k1=0, k2=2):
             delta_min=truth_jet["pt_cut"],
             lam=float(truth_jet["Lambda"]),
             N_best=Nbest,
+            visualize = True,
         )[0]
                             )
 
@@ -300,7 +309,10 @@ if __name__ == "__main__":
         jetsList, jetsListLogLH = fill_GreedyList("tree_" + str(Njets) + "_truth_" + str(i), k1=0,
                                                   k2=Njets)
 
-        with open(data_dir + "GreedyJets/Greedy_" + str(Njets) + "Mw_" + str(i) + ".pkl", "wb") as f:
+        output_dir = args.output_dir+"GreedyJets/"
+        os.system('mkdir -p ' + output_dir)
+
+        with open(output_dir+"Greedy_" + str(Njets) + "Mw_" + str(i) + ".pkl", "wb") as f:
             pickle.dump((jetsList, jetsListLogLH), f)
 
 
@@ -310,7 +322,10 @@ if __name__ == "__main__":
         BSO_jetsList, BSO_jetsListLogLH = fill_BSList("tree_" + str(Njets) + "_truth_" + str(i), k1=0,
                                                       k2=Njets)
 
-        with open(data_dir + "BeamSearchJets/BSO_" + str(Njets) + "Mw_" + str(i) + ".pkl", "wb") as f:
+        output_dir = args.output_dir+"BeamSearchJets/"
+        os.system('mkdir -p ' + output_dir)
+
+        with open(output_dir+"BSO_" + str(Njets) + "Mw_" + str(i) + ".pkl", "wb") as f:
             pickle.dump((BSO_jetsList, BSO_jetsListLogLH), f)
 
 
@@ -322,7 +337,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--data_dir", type=str, default="../data/", help="Flag to run beam seach clustering"
+        "--data_dir", type=str, default="/scratch/sm4511/TreeAlgorithms/data/Truth/", help="Data dir"
     )
 
     parser.add_argument(
@@ -339,6 +354,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--N_jets", type=str, default=2, help="# of jets in each dataset"
     )
+
+    parser.add_argument(
+        "--output_dir", type=str, default="/scratch/sm4511/TreeAlgorithms/data/", help="Output dir"
+    )
+
+
 
     logger = get_logger(level=logging.INFO)
 
@@ -358,12 +379,12 @@ if __name__ == "__main__":
 
     """We ran a scan for 30 sets of 500 jets each."""
     if args.greedyScan == "True":
-        runGreedy_Scan(args.id, args.N_jets)
+        runGreedy_Scan(int(args.id), int(args.N_jets))
         # runGreedy_Scan(Nstart, Nend, N_jets)
 
 
 
     """We ran a scan for 10 sets of 500 jets each. (Below as an example there is a scan for 4 sets of 2 jets each)"""
     if args.BSScan == "True":
-        runBSO_Scan(args.id, args.N_jets)
+        runBSO_Scan(int(args.id), int(args.N_jets))
         # runBSO_Scan(Nstart, Nend, N_jets)
