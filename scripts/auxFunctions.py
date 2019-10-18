@@ -27,6 +27,24 @@ from scripts.utils import get_logger
 logger = get_logger(level=logging.INFO)
 
 
+def getStd(inList, step):
+    """ Group jets into subgroups and get std"""
+    Njets = len(inList)
+    stdList = inList[0:Njets - (Njets % step)]
+
+    avgList = []
+    for i in range(0, len(stdList), step):
+        avgList.append(np.average(stdList[i:i + step]))
+
+    Listavg = np.std(avgList)
+
+    return Listavg
+
+
+def statSigma(inList):
+    return np.std(inList) / np.sqrt(len(inList))
+
+
 def deltaRootCut(start, end, in_truth_Dic, in_Greedy_Dic, in_BSO_Dic, Width=0):
     truthDic = copy.copy(in_truth_Dic)
     GreedyDic = copy.copy(in_Greedy_Dic)
@@ -155,6 +173,9 @@ def subjetPhi(DicList):
     phiDeltaList = []
 
     for jet in jetDic["jetsList"].flatten():
+
+        PhiJet = np.arctan2(jet["content"][jet["root_id"]][0], jet["content"][jet["root_id"]][1])
+
         root_id = jet["root_id"]
         idL = jet["tree"][root_id][0]
         idR = jet["tree"][root_id][1]
@@ -164,7 +185,8 @@ def subjetPhi(DicList):
         delta_vec = (pR - pL) / 2
 
         """ arctan2 to find the right quadrant"""
-        phiDelta = np.arctan2(delta_vec[0], delta_vec[1])
+        phiDelta = abs(np.arctan2(delta_vec[0], delta_vec[1]) - PhiJet)
+
         phiDeltaList.append(phiDelta)
 
         phi1 = np.arctan2(pL[0], pL[1])
@@ -177,6 +199,8 @@ def subjetPhi(DicList):
     jetDic["SubjetPhi"] = phiList
 
     """ Delta_root Phi value"""
+    phiDeltaList = [entry if entry <= np.pi else (2*np.pi - entry) for entry in phiDeltaList]
+    phiDeltaList = [entry if entry <= np.pi/2 else (np.pi - entry) for entry in phiDeltaList]
     jetDic["SubjetPhiDelta"] = phiDeltaList
 
     return jetDic
@@ -185,7 +209,69 @@ def subjetPhi(DicList):
 
 
 
-def traversePhi(jet, node_id, constPhiList, PhiDeltaList):
+
+
+"##########"
+""" log LH vs dij and theta angles"""
+
+
+def scanJets(DicList, angles=False, dijmetrics=False):
+
+    """ JetsPhiDelta: Polar angle for Delta
+      JetsPhiDeltaRel: Angle for Delta with respect to the jet axis """
+    JetsConstPhi = []
+    JetsPhiDelta = []
+    JetsPhiDeltaRel = []
+
+    dij = []
+    dijSubjets = []
+
+    jetDic = copy.copy(DicList)
+
+    jetDic["jetsList"] = np.asarray(jetDic["jetsList"]).flatten()
+
+    for jet in jetDic["jetsList"]:
+
+        # PhiJet = np.arctan2(jet["content"][jet["root_id"]][0], jet["content"][jet["root_id"]][1])
+
+        if dijmetrics:
+            """ dij vs logLH"""
+            dij = dij + jet["dij"]
+            dijSubjets = dijSubjets + [jet["dij"][0]]
+
+        if angles:
+            """ Angular quantities"""
+            ConstPhi, PhiDelta, PhiDeltaListRel = traversePhi(jet, jet["root_id"], [], [],[])
+            jet["ConstPhi"] = ConstPhi
+            jet["PhiDelta"] = PhiDelta
+            jet["PhiDeltaRel"] = PhiDeltaListRel
+            # jet["PhiDeltaRel"]= np.asarray(PhiDelta) - PhiJet
+
+            JetsConstPhi = JetsConstPhi + ConstPhi
+            JetsPhiDelta = JetsPhiDelta + PhiDelta
+            JetsPhiDeltaRel = np.concatenate((JetsPhiDeltaRel,jet["PhiDeltaRel"]))
+
+    if angles:
+        jetDic["JetsConstPhi"] = JetsConstPhi
+        jetDic["JetsPhiDelta"] = JetsPhiDelta
+
+
+        JetsPhiDeltaRel = [entry if entry <= np.pi else (2 * np.pi - entry) for entry in JetsPhiDeltaRel]
+        JetsPhiDeltaRel = [entry if entry <= np.pi / 2 else (np.pi - entry) for entry in JetsPhiDeltaRel]
+        jetDic["JetsPhiDeltaRel"] = JetsPhiDeltaRel
+
+
+    if dijmetrics:
+        jetDic["dijs"] = np.transpose(dij)
+        jetDic["dijSubjets"] = np.transpose(dijSubjets)
+
+    return jetDic
+
+
+
+
+
+def traversePhi(jet, node_id, constPhiList, PhiDeltaList, PhiDeltaListRel):
     """
     Recursive function that traverses the tree. Gets leaves angle phi, and delta_parent phi angle for all parents in the tree.
     """
@@ -205,14 +291,21 @@ def traversePhi(jet, node_id, constPhiList, PhiDeltaList):
 
         delta_vec = (pR - pL) / 2
 
+        """ Find subjet angle"""
+        PhiPseudoJet = np.arctan2(jet["content"][node_id][0], jet["content"][node_id][1])
+
         """ arctan2 to find the right quadrant"""
-        PhiDeltaList.append(np.arctan2(delta_vec[0], delta_vec[1]))
+        TempDeltaPhi = np.arctan2(delta_vec[0], delta_vec[1])
+        PhiDeltaList.append(TempDeltaPhi)
+
+        PhiDeltaListRel.append( abs(TempDeltaPhi - PhiPseudoJet))
 
         traversePhi(
             jet,
             jet["tree"][node_id, 0],
             constPhiList,
             PhiDeltaList,
+            PhiDeltaListRel,
         )
 
         traversePhi(
@@ -220,67 +313,29 @@ def traversePhi(jet, node_id, constPhiList, PhiDeltaList):
             jet["tree"][node_id, 1],
             constPhiList,
             PhiDeltaList,
+            PhiDeltaListRel,
         )
 
-    return constPhiList, PhiDeltaList
+    return constPhiList, PhiDeltaList, PhiDeltaListRel
 
-
-
-
-"##########"
-""" log LH vs dij and theta angles"""
-
-
-def scanJets(DicList, angles=False, dijmetrics=False):
-    JetsConstPhi = []
-    JetsPhiDelta = []
-
-    dij = []
-    dijSubjets = []
-
-    jetDic = copy.copy(DicList)
-
-    jetDic["jetsList"] = jetDic["jetsList"].flatten()
-
-    for jet in jetDic["jetsList"]:
-
-        if dijmetrics:
-            """ dij vs logLH"""
-            dij = dij + jet["dij"]
-            dijSubjets = dijSubjets + [jet["dij"][0]]
-
-        if angles:
-            """ Angular quantities"""
-            ConstPhi, PhiDelta = traversePhi(jet, jet["root_id"], [], [])
-            jet["ConstPhi"] = ConstPhi
-            jet["PhiDelta"] = PhiDelta
-
-            JetsConstPhi = JetsConstPhi + ConstPhi
-            JetsPhiDelta = JetsPhiDelta + PhiDelta
-
-    if angles:
-        jetDic["JetsConstPhi"] = JetsConstPhi
-        jetDic["JetsPhiDelta"] = JetsPhiDelta
-
-    if dijmetrics:
-        jetDic["dijs"] = np.transpose(dij)
-        jetDic["dijSubjets"] = np.transpose(dijSubjets)
-
-    return jetDic
 
 
 
 def scanAngles(DicList):
     JetsConstPhi = []
     JetsPhiDelta = []
+    JetsPhiDeltaRel =[]
 
     for jet in DicList["jetsList"].flatten():
 
         JetsConstPhi = JetsConstPhi + jet["ConstPhi"]
         JetsPhiDelta = JetsPhiDelta + jet["PhiDelta"]
+        JetsPhiDeltaRel = np.concatenate((JetsPhiDeltaRel,jet["PhiDeltaRel"]))
 
+    JetsPhiDeltaRel = [entry if entry>=0 else (entry+np.pi) for entry in JetsPhiDeltaRel]
     DicList["JetsConstPhi"] = JetsConstPhi
     DicList["JetsPhiDelta"] = JetsPhiDelta
+    DicList["JetsPhiDeltaRel"] = JetsPhiDeltaRel
 
     return DicList
 
@@ -303,8 +358,126 @@ def scanDij(DicList):
 
     return DicList
 
+"""#######################################################"""
+""" Constituents imbalance"""
 
 
+def scanTreeImbalance(DicList,w=None, startLevel = None):
+    """ Get tree and subjet imbalance lists"""
+    subjetsImb = []
+    treesImb = []
+
+    for jet in DicList["jetsList"].flatten():
+
+        subjetsImb.append(subjetConst(jet, jet["root_id"]))
+        treesImb.append(treeImbalance(jet , jet["root_id"],w, startLevel))
+
+
+    DicList["subjetsImb"] = subjetsImb
+    DicList["treesImb"] = treesImb
+
+    return DicList
+
+
+
+def treeImbalance(jet, node_id, w, node_idLevel):
+    """ Get:
+    inners_list: Number of inner nodes (not counting the last splittings where both children are leaves)
+    Imbalance: imbalance of a tree
+    """
+    inners_list, Imbalance = mainTraverse(jet, node_id, [], [], node_idLevel, w=w)
+
+    # if len(inners_list)>0:
+    treeIm = sum(Imbalance) / len(inners_list)
+    # treeIm = sum(Imbalance)
+
+    return treeIm
+
+
+def mainTraverse(jet, node_id, inners_list, Imbalance, Nlevel, w=None):
+    """
+    Recursive function to get a list of the imbalance for all the branches of a tree (at all levels).
+    We weight the contribution of each level by a decaying exponential with rate w * the level number Nlevel
+    """
+    #     inners_list.append(1)
+
+    Imbalance.append(np.exp(- w * Nlevel) * subjetConst(jet, node_id))
+
+    Nlevel += 1
+    #     print("Nlevel = ", Nlevel)
+
+    if jet["tree"][node_id, 0] != -1:
+
+        mainTraverse(
+            jet,
+            jet["tree"][node_id, 0],
+            inners_list,
+            Imbalance,
+            Nlevel,
+            w,
+        )
+
+        mainTraverse(
+            jet,
+            jet["tree"][node_id, 1],
+            inners_list,
+            Imbalance,
+            Nlevel,
+            w,
+        )
+
+        # Add all the inner nodes, except the ones whose both children are leaves.
+        # L = jet["tree"][node_id, 0]
+        # R = jet["tree"][node_id, 1]
+        #
+        # if jet["tree"][L, 0] != -1 and jet["tree"][R, 0] != -1:
+        inners_list.append(1)
+
+    return inners_list, Imbalance
+
+
+def subjetConst(jet, node_id):
+    """
+    Given a parent node, get the imbalance in the number of constituents of the left and right branches
+    :param jet:
+    :param node_id:
+    :return:
+    """
+    LConst = traverse(jet, jet["tree"][node_id][0], [], [])
+    RConst = traverse(jet, jet["tree"][node_id][1], [], [])
+
+    Im = abs(LConst - RConst) / (LConst + RConst)
+    #         return LConst, RConst, abs(LConst - RConst)/(LConst+RConst)
+
+    return Im
+
+
+def traverse(jet, node_id, outers_list, Nconst):
+    """
+    Traverse function to get the number of constituents of a branch
+    """
+    if jet["tree"][node_id, 0] == -1:
+
+        Nconst.append(1)
+    #         print("Nconst = ", Nconst)
+    #         outers_list.append(jet["content"][node_id])
+
+    else:
+        traverse(
+            jet,
+            jet["tree"][node_id, 0],
+            outers_list,
+            Nconst,
+        )
+
+        traverse(
+            jet,
+            jet["tree"][node_id, 1],
+            outers_list,
+            Nconst,
+        )
+
+    return len(Nconst)
 
 
 "#########################################################"

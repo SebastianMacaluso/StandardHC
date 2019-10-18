@@ -19,7 +19,8 @@ logger = get_logger(level=logging.INFO)
 
 
 
-data_dir="/scratch/sm4511/TreeAlgorithms/data/"
+# data_dir="/scratch/sm4511/TreeAlgorithms/data/"
+data_dir="/Users/sebastianmacaluso/Documents/PrinceData/"
 
 
 
