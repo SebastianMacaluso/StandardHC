@@ -154,11 +154,11 @@ def recluster(
 	"""Fill jet dictionaries with log likelihood of truth jet"""
 	jet = likelihood.enrich_jet_logLH(jet, dij=True)
 
-
-	""" Angular quantities"""
-	ConstPhi, PhiDelta = auxFunctions.traversePhi(jet, jet["root_id"], [], [])
-	jet["ConstPhi"] = ConstPhi
-	jet["PhiDelta"] = PhiDelta
+	#
+	# """ Angular quantities"""
+	# ConstPhi, PhiDelta = auxFunctions.traversePhi(jet, jet["root_id"], [], [],[])
+	# jet["ConstPhi"] = ConstPhi
+	# jet["PhiDelta"] = PhiDelta
 
 
 	logger.debug(f" Recluster and build tree algorithm total time = {time.time()  - start_time}")
@@ -235,6 +235,8 @@ def greedyLH(levelContent, delta_min= None, lam=None, M_Hard = None):
 	  - linkage_list: linkage list to build heat clustermap visualizations.
 	  - logLH: list with the log likelihood of each pairing.
 	"""
+	logger.debug(f" levelContent = {levelContent}")
+
 
 	Nconst = len(levelContent)
 
@@ -316,7 +318,32 @@ def NNeighbors(
 
 	"""
 
-	NNpairs =  [(-np.inf, [0, -999])] + \
+	NNpairs = [
+		max(
+			[
+				(
+					likelihood.Basic_split_logLH(
+						levelContent[k],
+						levelDeltas[k],
+						levelContent[k + j],
+						levelDeltas[k + j],
+						delta_min,
+						lam
+					),
+					[k, k + j]
+				)
+				for j in range(1, len(levelContent), 1)
+			],
+			key=lambda x: x[0]
+		)
+		for k in [0]
+	]
+
+
+	# NNpairs = lowestNodeUpdate[0]
+
+
+	NNpairs =  NNpairs + \
 	           [
 		           max(
 			           [
@@ -393,7 +420,7 @@ def logLHMaxLevel(
 	logger.debug(f" maxPairLogLH, maxPairIdx = {max(NNpairs, key=lambda x: x[0])}")
 	logger.debug(f" NNpairs = {NNpairs}")
 	right = NNpairs.index(max(NNpairs, key=lambda x: x[0]))
-
+	logger.debug(f" index of the right node to be removed = {right}")
 
 	""" Remove nodes pair with max logLH """
 	maxPairLogLH, maxPairIdx = NNpairs.pop(right)
@@ -402,7 +429,7 @@ def logLHMaxLevel(
 	rightIdx = maxPairIdx[0]
 
 
-	""" Index of the left node to be removed """
+	""" Index in NNpairs of the left node to be removed """
 	left = [entry[1][0] for entry in NNpairs].index(leftIdx)
 	logger.debug(f" left idxs list = {[entry[1][0] for entry in NNpairs]}")
 
@@ -410,7 +437,8 @@ def logLHMaxLevel(
 
 
 
-	""" Update levelDeltas, idx, levelContent, jetContent, N_leaves_list, linkage_list, jetTree and logLH lists """
+	""" Update levelDeltas, idx, levelContent, jetContent, N_leaves_list, linkage_list, jetTree and logLH lists.
+	 Note: left is always smaller than right, so we pop the right element first """
 	idx.pop(right)
 	idx.pop(left)
 	idx.append(Nparent)
@@ -436,18 +464,81 @@ def logLHMaxLevel(
 	logLH.append(maxPairLogLH)
 
 
-
-	""" Find if any other node had one of the merged nodes as its NN """
+	""" Find if any other node had one of the merged nodes as its NN (Nearest Neighbor) """
 	NNidxUpdate = [i for i, entry in enumerate(NNpairs) if (entry[1][1] == leftIdx or entry[1][1] == rightIdx)]
+	logger.debug(f" NNpairs after deleting left merged node = {NNpairs}")
+	logger.debug(f" Indices that need to get the NN updated = {NNidxUpdate}")
+
+
+	""" Find merged node NN and append to list """
+	if len(levelContent)>1:
+		NewNodeNN = max(
+			[
+				(
+					likelihood.Basic_split_logLH(
+						newNode,
+						newDelta,
+						levelContent[j],
+						levelDeltas[j],
+						delta_min,
+						lam
+					),
+					[Nparent, idx[j]]
+				)
+				for j in range(len(levelContent)-1)
+			],
+			key=lambda x: x[0]
+		)
+
+		NNpairs.append(NewNodeNN)
+
+
+
+
+
+
+
+
+
 
 	if NNidxUpdate!=[]:
 
-		logger.debug(f" Indices that need to get the NN updated = {NNidxUpdate}")
+		# logger.debug(f" NNpairs after deleting left merged node = {NNpairs}")
+		# logger.debug(f" Indices that need to get the NN updated = {NNidxUpdate}")
 		logger.debug(f" First entry of NNpairs = {NNpairs[0]}")
 
+		# if NNidxUpdate[0]==0 and NNpairs[NNidxUpdate[0]][1][0]==0:
 		if NNidxUpdate[0]==0:
-			NNpairs[NNidxUpdate[0]] = (-np.inf, NNpairs[NNidxUpdate[0]][1])
-			NNidxUpdate = NNidxUpdate[1::]
+			lowestNodeUpdate = [
+				max(
+					[
+						(
+							likelihood.Basic_split_logLH(
+								levelContent[k],
+								levelDeltas[k],
+								levelContent[k + j],
+								levelDeltas[k + j],
+								delta_min,
+								lam
+							),
+							[idx[k], idx[k + j]]
+						)
+						for j in range(1, len(levelContent), 1)
+					],
+					key=lambda x: x[0]
+				)
+				for k in [0]
+			]
+
+			NNpairs[NNidxUpdate[0]] = lowestNodeUpdate[0]
+
+
+
+			# logger.debug(f" hello")
+			# logger.debug(f" NNpairs[NNidxUpdate[0]][1][0] = {NNpairs[NNidxUpdate[0]][1][0]}")
+			# NNpairs[NNidxUpdate[0]] = (-np.inf, NNpairs[NNidxUpdate[0]][1])
+			# NNidxUpdate = NNidxUpdate[1::]
+
 
 		NNpairsUpdate = [
 			max(
@@ -467,37 +558,15 @@ def logLHMaxLevel(
 				],
 				key=lambda x: x[0]
 			)
-			for k in NNidxUpdate
+			for k in NNidxUpdate[1::]
 		]
 
-		for i,entry in enumerate(NNidxUpdate):
+		for i,entry in enumerate(NNidxUpdate[1::]):
 			NNpairs[entry] = NNpairsUpdate[i]
 
 
 
-	""" Find merged node NN and append to list """
-	NewNodeNN = max(
-		[
-			(
-				likelihood.Basic_split_logLH(
-					newNode,
-					newDelta,
-					levelContent[j],
-					levelDeltas[j],
-					delta_min,
-					lam
-				),
-				[Nparent, idx[j]]
-			)
-			for j in range(len(levelContent))
-		],
-		key=lambda x: x[0]
-	)
-
-	NNpairs.append(NewNodeNN)
-
-
-
+	logger.debug(f" NNpairs after updating pairs and adding new node = {NNpairs}")
 
 
 
