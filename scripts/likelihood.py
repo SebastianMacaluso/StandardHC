@@ -43,6 +43,9 @@ def split_logLH(pL, delta_L, pR, delta_R, delta_min, lam):
         + np.log(1 / 2 / np.pi)
     )
 
+    if delta_P < delta_min:
+        logLH = - np.inf
+
     return logLH, p, delta_P, phi
 
 
