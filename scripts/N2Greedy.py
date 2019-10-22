@@ -154,11 +154,12 @@ def recluster(
 	"""Fill jet dictionaries with log likelihood of truth jet"""
 	jet = likelihood.enrich_jet_logLH(jet, dij=True)
 
-	#
-	# """ Angular quantities"""
-	# ConstPhi, PhiDelta = auxFunctions.traversePhi(jet, jet["root_id"], [], [],[])
-	# jet["ConstPhi"] = ConstPhi
-	# jet["PhiDelta"] = PhiDelta
+	""" Angular quantities"""
+	ConstPhi, PhiDelta, PhiDeltaListRel = auxFunctions.traversePhi(jet, jet["root_id"], [], [], [])
+	jet["ConstPhi"] = ConstPhi
+	jet["PhiDelta"] = PhiDelta
+	jet["PhiDeltaRel"] = PhiDeltaListRel
+
 
 
 	logger.debug(f" Recluster and build tree algorithm total time = {time.time()  - start_time}")
@@ -235,8 +236,6 @@ def greedyLH(levelContent, delta_min= None, lam=None, M_Hard = None):
 	  - linkage_list: linkage list to build heat clustermap visualizations.
 	  - logLH: list with the log likelihood of each pairing.
 	"""
-	logger.debug(f" levelContent = {levelContent}")
-
 
 	Nconst = len(levelContent)
 
@@ -301,9 +300,9 @@ def NNeighbors(
 	-For each leaf i of the tree, calculate its nearest neighbor (NN) j and the log likelihood for that pairing. This is O(N^2)
 	Format: NNpairs = [ (logLH,[leaf i,leaf j]) for i in leaves]
 
-	Calculate the log likelihood between all possible pairings of the leaves at a certain level and get the maximum.
-	-Update the constituents list by deleting the constituents that are merged and adding the new pseudojet
-	(We refer to both leaves and inner nodes as pseudojets.)
+	Calculate the log likelihood between all possible pairings of the leaves at a certain level and get the maximum. Each entry in NN[airs corresponds to a node and contains that node and its nearest neighbor node. Format: [(logLH,[node,node NN])..]
+	For efficiency, we only loop over the nodes to the left of each node. So, if the max logLH pairing is with a node to the right, that will be considered when the "neighbor node" becomes the "node".
+	We also have a list that keeps track of the index of each node (in the "idx" list), thus we want 1 pairing per node. For the 1st node, we add an entry (-np.inf, [0, -999])] so that this will have the lowest priority. All the pairings of the 1st node are considered by the nodes to the right.
 
 	Args:
 	    - levelContent: array with the constituents momentum list for the current level (i.e. after deleting the constituents that are merged and
@@ -318,32 +317,7 @@ def NNeighbors(
 
 	"""
 
-	NNpairs = [
-		max(
-			[
-				(
-					likelihood.Basic_split_logLH(
-						levelContent[k],
-						levelDeltas[k],
-						levelContent[k + j],
-						levelDeltas[k + j],
-						delta_min,
-						lam
-					),
-					[k, k + j]
-				)
-				for j in range(1, len(levelContent), 1)
-			],
-			key=lambda x: x[0]
-		)
-		for k in [0]
-	]
-
-
-	# NNpairs = lowestNodeUpdate[0]
-
-
-	NNpairs =  NNpairs + \
+	NNpairs =  [(-np.inf, [0, -999])] + \
 	           [
 		           max(
 			           [
@@ -415,12 +389,16 @@ def logLHMaxLevel(
 	"""
 
 
-	""" Index of the pair that gives the max logLH, also the index of the right node to be removed """
-
-	logger.debug(f" maxPairLogLH, maxPairIdx = {max(NNpairs, key=lambda x: x[0])}")
+	""" 
+	right: Index of the pair that gives the max logLH, also the index of the right node to be removed from the idx list.
+	We do not consider the 1st entry to find the max log LH pairing, because all the pairings of that node are considered by the nodes to the right. This way we do not need to update the 1st node NN when the NN is clustered with some other node. 
+	This avoids getting an error. Reason: when Delta_Parent<Delta_cut that pairing is not viable within our model, thus we give it a logLH = - Infinity. However, we also had set to (- infinity) the node with idx=0 and the 1st node of NNpairs at each level (only when we had to update its NN).
+	Thus, (especially toward the top of the tree), it can happen that all the options have logLH= - Infinity, choosing the 1st entry on the NNpairs list. The problem is that this entry sometimes has as the NN a node that is missing (was already clustered) because, as mentioned, we do not update that node NN.
+	"""
+	logger.debug(f" maxPairLogLH, maxPairIdx = {max(NNpairs[1::], key=lambda x: x[0])}")
 	logger.debug(f" NNpairs = {NNpairs}")
-	right = NNpairs.index(max(NNpairs, key=lambda x: x[0]))
-	logger.debug(f" index of the right node to be removed = {right}")
+	right = NNpairs.index(max(NNpairs[1::], key=lambda x: x[0]))
+
 
 	""" Remove nodes pair with max logLH """
 	maxPairLogLH, maxPairIdx = NNpairs.pop(right)
@@ -429,7 +407,7 @@ def logLHMaxLevel(
 	rightIdx = maxPairIdx[0]
 
 
-	""" Index in NNpairs of the left node to be removed """
+	""" Index of the left node to be removed """
 	left = [entry[1][0] for entry in NNpairs].index(leftIdx)
 	logger.debug(f" left idxs list = {[entry[1][0] for entry in NNpairs]}")
 
@@ -437,8 +415,7 @@ def logLHMaxLevel(
 
 
 
-	""" Update levelDeltas, idx, levelContent, jetContent, N_leaves_list, linkage_list, jetTree and logLH lists.
-	 Note: left is always smaller than right, so we pop the right element first """
+	""" Update levelDeltas, idx, levelContent, jetContent, N_leaves_list, linkage_list, jetTree and logLH lists """
 	idx.pop(right)
 	idx.pop(left)
 	idx.append(Nparent)
@@ -464,81 +441,19 @@ def logLHMaxLevel(
 	logLH.append(maxPairLogLH)
 
 
-	""" Find if any other node had one of the merged nodes as its NN (Nearest Neighbor) """
+
+	""" Find if any other node had one of the merged nodes as its NN """
 	NNidxUpdate = [i for i, entry in enumerate(NNpairs) if (entry[1][1] == leftIdx or entry[1][1] == rightIdx)]
-	logger.debug(f" NNpairs after deleting left merged node = {NNpairs}")
-	logger.debug(f" Indices that need to get the NN updated = {NNidxUpdate}")
-
-
-	""" Find merged node NN and append to list """
-	if len(levelContent)>1:
-		NewNodeNN = max(
-			[
-				(
-					likelihood.Basic_split_logLH(
-						newNode,
-						newDelta,
-						levelContent[j],
-						levelDeltas[j],
-						delta_min,
-						lam
-					),
-					[Nparent, idx[j]]
-				)
-				for j in range(len(levelContent)-1)
-			],
-			key=lambda x: x[0]
-		)
-
-		NNpairs.append(NewNodeNN)
-
-
-
-
-
-
-
-
-
 
 	if NNidxUpdate!=[]:
 
-		# logger.debug(f" NNpairs after deleting left merged node = {NNpairs}")
-		# logger.debug(f" Indices that need to get the NN updated = {NNidxUpdate}")
+		logger.debug(f" Indices that need to get the NN updated = {NNidxUpdate}")
 		logger.debug(f" First entry of NNpairs = {NNpairs[0]}")
 
-		# if NNidxUpdate[0]==0 and NNpairs[NNidxUpdate[0]][1][0]==0:
 		if NNidxUpdate[0]==0:
-			lowestNodeUpdate = [
-				max(
-					[
-						(
-							likelihood.Basic_split_logLH(
-								levelContent[k],
-								levelDeltas[k],
-								levelContent[k + j],
-								levelDeltas[k + j],
-								delta_min,
-								lam
-							),
-							[idx[k], idx[k + j]]
-						)
-						for j in range(1, len(levelContent), 1)
-					],
-					key=lambda x: x[0]
-				)
-				for k in [0]
-			]
-
-			NNpairs[NNidxUpdate[0]] = lowestNodeUpdate[0]
-
-
-
-			# logger.debug(f" hello")
-			# logger.debug(f" NNpairs[NNidxUpdate[0]][1][0] = {NNpairs[NNidxUpdate[0]][1][0]}")
-			# NNpairs[NNidxUpdate[0]] = (-np.inf, NNpairs[NNidxUpdate[0]][1])
-			# NNidxUpdate = NNidxUpdate[1::]
-
+			""" Do not update the 1st entry NN, but set the logLH = - Infinity"""
+			NNpairs[NNidxUpdate[0]] = (-np.inf, NNpairs[NNidxUpdate[0]][1])
+			NNidxUpdate = NNidxUpdate[1::]
 
 		NNpairsUpdate = [
 			max(
@@ -558,15 +473,37 @@ def logLHMaxLevel(
 				],
 				key=lambda x: x[0]
 			)
-			for k in NNidxUpdate[1::]
+			for k in NNidxUpdate
 		]
 
-		for i,entry in enumerate(NNidxUpdate[1::]):
+		for i,entry in enumerate(NNidxUpdate):
 			NNpairs[entry] = NNpairsUpdate[i]
 
 
 
-	logger.debug(f" NNpairs after updating pairs and adding new node = {NNpairs}")
+	""" Find merged node NN and append to list """
+	NewNodeNN = max(
+		[
+			(
+				likelihood.Basic_split_logLH(
+					newNode,
+					newDelta,
+					levelContent[j],
+					levelDeltas[j],
+					delta_min,
+					lam
+				),
+				[Nparent, idx[j]]
+			)
+			for j in range(len(levelContent))
+		],
+		key=lambda x: x[0]
+	)
+
+	NNpairs.append(NewNodeNN)
+
+
+
 
 
 

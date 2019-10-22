@@ -198,11 +198,16 @@ def recluster(
 		"""Fill jet dictionaries with log likelihood of truth jet"""
 		jet = likelihood.enrich_jet_logLH(jet, dij=True)
 
+		# """ Angular quantities"""
+		# ConstPhi, PhiDelta = auxFunctions.traversePhi(jet, jet["root_id"], [], [])
+		# jet["ConstPhi"] = ConstPhi
+		# jet["PhiDelta"] = PhiDelta
+
 		""" Angular quantities"""
-		ConstPhi, PhiDelta = auxFunctions.traversePhi(jet, jet["root_id"], [], [])
+		ConstPhi, PhiDelta, PhiDeltaListRel = auxFunctions.traversePhi(jet, jet["root_id"], [], [], [])
 		jet["ConstPhi"] = ConstPhi
 		jet["PhiDelta"] = PhiDelta
-
+		jet["PhiDeltaRel"] = PhiDeltaListRel
 
 		jetsList.append(jet)
 

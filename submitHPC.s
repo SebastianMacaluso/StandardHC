@@ -2,12 +2,12 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
-#SBATCH --time=2:59:00
+#SBATCH --time=5:59:00
 #SBATCH --mem=32GB
 #SBATCH --job-name=ClusteringAlgorithms
 #SBATCH --mail-type=END
 #SBATCH --mail-user=sm4511@nyu.edu
-#SBATCH --output=logs/slurm_%j.out
+#SBATCH --output=logs/slurm_%${SLURM_ARRAY_TASK_ID}_%j.out
 
 module purge
 
@@ -25,7 +25,6 @@ mkdir -p $RUNDIR
 
 cd $HOME/TreeAlgorithms/scripts/
 
-##python jetClustering.py --greedyScan=True --id=${SLURM_ARRAY_TASK_ID}
 
 ## GREEDY
 ##python jetClustering.py --greedyScan=True --N_jets=500 --id=${SLURM_ARRAY_TASK_ID}
@@ -33,11 +32,26 @@ cd $HOME/TreeAlgorithms/scripts/
 ##Beam Search
 ##python jetClustering.py --greedyScan=True --BSScan=True --N_jets=2 --id=${SLURM_ARRAY_TASK_ID} --data_dir="/home/sm4511/TreeAlgorithms/data/truth/"
 
-python jetClustering.py --greedyScan=True --BSScan=True --N_jets=100 --id=${SLURM_ARRAY_TASK_ID}
 
 
 
+##python jetClustering.py --greedyScan=True --BSScan=True --KtAntiktCAscan=True --N_jets=100 --id=${SLURM_ARRAY_TASK_ID} --jetType=QCDjets
+##python jetClustering.py --KtAntiktCAscan=True --N_jets=100 --id=${SLURM_ARRAY_TASK_ID} --jetType=Wjets
+
+python jetClustering.py --greedyScan=True --BSScan=True --KtAntiktCAscan=True --N_jets=100 --id=${SLURM_ARRAY_TASK_ID} --jetType=Wjets
+
+##To test:
+
+
+##python jetClustering.py --greedyScan=True --N_jets=100 --id=${SLURM_ARRAY_TASK_ID} --jetType=QCDjets
+
+
+##python jetClustering.py --greedyScan=True --BSScan=True --KtAntiktCAscan=True --N_jets=2 --id=${SLURM_ARRAY_TASK_ID} --jetType=QCDjets
+
+##Notes:
+##jetType= QCDjets , Wjets or Topjets
 
 ## to submit(for 2 jobs): sbatch --array 0-2 submitHPC.s
+
 ## to submit 50000 jets (for 2 jobs): sbatch --array 0-499 submitHPC.s
 

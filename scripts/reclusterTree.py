@@ -264,24 +264,34 @@ def dijMinPair(
 
 
     # Get all dij at current level: dij=min(pTi^(2\alpha),pTj^(2\alpha)) * [arccos((pi.pj)/|pi|*|pj|)]^2
-    epsilon=1e-6 #For numerical stability
+    tempCos = [np.dot(const_list[pairs][k][0],const_list[pairs][k][1])/
+                            (np.linalg.norm(const_list[pairs][k][0]) * np.linalg.norm(const_list[pairs][k][1]))
+               for k in range(len(const_list[pairs]))]
+
+    tempPhi = np.arccos([entry if abs(entry)<=1 else np.sign(entry) for entry in tempCos])
+
     dij_list = [(np.sort((const_list_pt[pairs][k]) ** (2 * alpha))[0] * \
-                 (np.arccos(np.dot(const_list[pairs][k][0],const_list[pairs][k][1])/
-                            (epsilon + np.linalg.norm(const_list[pairs][k][0]) * np.linalg.norm(const_list[pairs][k][1]))\
-                            )) ** 2, k)\
+                 (tempPhi[k]) ** 2, k)\
                 for k in range(len(const_list[pairs]))]
+
+    # epsilon=1e-6 #For numerical stability
+    # dij_list = [(np.sort((const_list_pt[pairs][k]) ** (2 * alpha))[0] * \
+    #              (np.arccos(np.dot(const_list[pairs][k][0],const_list[pairs][k][1])/
+    #                         (epsilon + np.linalg.norm(const_list[pairs][k][0]) * np.linalg.norm(const_list[pairs][k][1]))\
+    #                         )) ** 2, k)\
+    #             for k in range(len(const_list[pairs]))]
 
     logger.debug(f"dij_list = {dij_list}")
 
-    cos_arg=(np.sum([np.count_nonzero(np.absolute(np.sum(const_list[pairs][k][0] * const_list[pairs][k][1]) /
-                            (np.sqrt(np.sum(const_list[pairs][k][0] ** 2)) * np.sqrt(
-                              np.sum(const_list[pairs][k][1] ** 2))))> 1) for k in range(len(const_list[pairs]))]))
-    logger.debug(f"Cos arg > 1? = {cos_arg}")
+    # cos_arg=(np.sum([np.count_nonzero(np.absolute(np.sum(const_list[pairs][k][0] * const_list[pairs][k][1]) /
+    #                         (np.sqrt(np.sum(const_list[pairs][k][0] ** 2)) * np.sqrt(
+    #                           np.sum(const_list[pairs][k][1] ** 2))))> 1) for k in range(len(const_list[pairs]))]))
+    # logger.debug(f"Cos arg > 1? = {cos_arg}")
 
-    cosines=[np.absolute(np.sum(const_list[pairs][k][0] * const_list[pairs][k][1]) /
-                            (np.sqrt(np.sum(const_list[pairs][k][0] ** 2)) * np.sqrt(
-                              np.sum(const_list[pairs][k][1] ** 2)))) for k in range(len(const_list[pairs]))]
-    logger.debug(f"pos,value = {[(i,cosines[i]) for i in range(len(cosines)) if np.absolute(cosines[i])<0.99]}")
+    # cosines=[np.absolute(np.sum(const_list[pairs][k][0] * const_list[pairs][k][1]) /
+    #                         (np.sqrt(np.sum(const_list[pairs][k][0] ** 2)) * np.sqrt(
+    #                           np.sum(const_list[pairs][k][1] ** 2)))) for k in range(len(const_list[pairs]))]
+    # logger.debug(f"pos,value = {[(i,cosines[i]) for i in range(len(cosines)) if np.absolute(cosines[i])<0.99]}")
 
 
 

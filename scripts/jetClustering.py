@@ -25,8 +25,69 @@ data_dir="/Users/sebastianmacaluso/Documents/PrinceData/"
 
 
 
+
 """####################################"""
 
+def appendJets(start, end, Njets, truth = False, BS = False, Greedy = False):
+    """ Load truth trees and create logLH lists """
+
+    startTime = time.time()
+
+    dic = {}
+
+    Total_jetsList = []
+    Total_jetsListLogLH = []
+    avg_logLH = []
+    # Nconst = []
+
+    TruthFilename = "Truth/tree_" + str(Njets) + "_truth_"
+    BSFilename = "GreedyJets/Greedy_" + str(Njets) + "Mw_"
+    greedyFilename = "BeamSearchJets/BSO_" + str(Njets) + "Mw_"
+
+
+    for i in range(start, end):
+        if  ( os.path.isfile(TruthFilename+ str(i) + ".pkl")
+            and os.path.isfile(BSFilename+ str(i) + ".pkl")
+            and os.path.isfile(greedyFilename+ str(i) + ".pkl")):
+
+            with open(data_dir+"Truth/tree_" + str(Njets) + "_truth_" + str(i) + ".pkl", "rb") as fd:
+                jetsList = pickle.load(fd, encoding='latin-1')
+
+            # """Number of jet constituents"""
+            # Nconst.append([len(jet["leaves"]) for jet in jetsList])
+
+            # """Fill jet dictionaries with log likelihood of truth jet"""
+            # [likelihood.enrich_jet_logLH(jet, dij=True) for jet in jetsList]
+
+            enrichTruthLogLH = [np.sum(jet["logLH"]) for jet in jetsList]
+
+            Total_jetsList.append(jetsList)
+            Total_jetsListLogLH.append(enrichTruthLogLH)
+
+            if (i+1)%20==0:
+                avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[i-19:i+1]).flatten()))
+
+    # print("lenght avg_logLH = ", len(avg_logLH))
+
+    """ Standard deviation for the average log LH for the N runs"""
+    sigma = np.std(avg_logLH)
+
+    """ Statistical error for the mean log LH for the  total number of jets as err = sqrt(s)/ sqrt(N), where  s is the sample variance"""
+    flatTotal_jetsListLogLH = np.asarray(Total_jetsListLogLH).flatten()
+    statSigma = np.std(flatTotal_jetsListLogLH) / np.sqrt(len(flatTotal_jetsListLogLH))
+
+    dic["jetsList"] = Total_jetsList
+    # dic["NconstList"] = np.asarray(Nconst)
+    dic["jetsListLogLH"] = flatTotal_jetsListLogLH
+    dic["avgLogLH"] = np.asarray(avg_logLH)
+    dic["sigma"] = sigma
+    dic["statSigma"] = statSigma
+
+    logger.info(f" TOTAL TIME = {time.time() - startTime}")
+
+    return dic
+
+""" ################################### """
 def appendTruthJets(start, end, Njets):
     """ Load truth trees and create logLH lists """
 
@@ -222,6 +283,19 @@ def fill_GreedyList(input_jets, Nbest=1, k1=0, k2=2):
 
     startTime = time.time()
 
+    # for k,truth_jet in enumerate(truth_jets):
+    #     print("k = ",k)
+    #     if k==27:
+    #         print("M_Hard = ",truth_jet["M_Hard"])
+    #         # print("Nconst = ", truth_jet["Nconst"] )
+    #     N2Greedy.recluster(
+    #         truth_jet,
+    #         delta_min=truth_jet["pt_cut"],
+    #         lam=float(truth_jet["Lambda"]),
+    #         visualize=True,
+    #     )
+
+
     greedyJets = [N2Greedy.recluster(
         truth_jet,
         delta_min=truth_jet["pt_cut"],
@@ -280,6 +354,27 @@ def fill_BSList(input_jets, Nbest=1, k1=0, k2=2):
 
 
 
+def fill_ktAlgos(input_jets, k1=0, k2=2, alpha = None):
+    """ Run the generalized kt algorithm over a list of sets of input jets.
+        Args: input jets
+        returns: clustered jets
+                     jets logLH
+    """
+
+
+
+    with open(args.data_dir + str(input_jets) + '.pkl', "rb") as fd:
+        truth_jets = pickle.load(fd, encoding='latin-1')[k1:k2]
+
+    startTime = time.time()
+
+    generalizedKtjets = [reclusterTree.recluster(truth_jet, alpha=alpha, save=False)
+                         for truth_jet in truth_jets]
+
+    print("TOTAL TIME = ", time.time() - startTime)
+
+    return generalizedKtjets
+
 
 if __name__ == "__main__":
 
@@ -313,7 +408,7 @@ if __name__ == "__main__":
         output_dir = args.output_dir+"GreedyJets/"
         os.system('mkdir -p ' + output_dir)
 
-        with open(output_dir+"Greedy_" + str(Njets) + "Mw_" + str(i) + ".pkl", "wb") as f:
+        with open(output_dir+"Greedy_" + str(Njets) + "_" + str(i) + ".pkl", "wb") as f:
             pickle.dump((jetsList, jetsListLogLH), f)
 
 
@@ -326,9 +421,32 @@ if __name__ == "__main__":
         output_dir = args.output_dir+"BeamSearchJets/"
         os.system('mkdir -p ' + output_dir)
 
-        with open(output_dir+"BSO_" + str(Njets) + "Mw_" + str(i) + ".pkl", "wb") as f:
+        with open(output_dir+"BSO_" + str(Njets) + "_" + str(i) + ".pkl", "wb") as f:
             pickle.dump((BSO_jetsList, BSO_jetsListLogLH), f)
 
+
+
+    def runKtAntiKtCA_Scan(i, Njets, alpha=None):
+        """ Run beam search algorithm"""
+        generalizedKtjets = fill_ktAlgos("tree_" + str(Njets) + "_truth_" + str(i),
+                                         k1=0,
+                                         k2=Njets,
+                                         alpha=alpha)
+
+        if alpha == 1:
+            name = "Kt"
+        elif alpha == -1:
+            name = "Antikt"
+        elif alpha == 0:
+            name = "CA"
+        else:
+            raise ValueError(f"Please pick a valid value for alpha (e.g. -1,0,1)")
+
+        output_dir = args.output_dir+"/"+name+"Jets/"
+        os.system('mkdir -p ' + output_dir)
+
+        with open(output_dir + name+"_" + str(Njets) + "_" + str(i) + ".pkl", "wb") as f:
+            pickle.dump(generalizedKtjets, f)
 
 
 
@@ -338,7 +456,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--data_dir", type=str, default="/scratch/sm4511/TreeAlgorithms/data/Truth/", help="Data dir"
+        "--jetType", type=str, required=True, help="Input jet type, e.g. 'QCDjets' or 'Wjets' "
     )
 
     parser.add_argument(
@@ -349,6 +467,10 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "--KtAntiktCAscan", type=str, default="False", help="Flag to run generalized kt clustering"
+    )
+
+    parser.add_argument(
         "--id", type=str, default=0, help="dataset id"
     )
 
@@ -356,8 +478,14 @@ if __name__ == "__main__":
         "--N_jets", type=str, default=2, help="# of jets in each dataset"
     )
 
+    args = parser.parse_args()
+
     parser.add_argument(
-        "--output_dir", type=str, default="/scratch/sm4511/TreeAlgorithms/data/", help="Output dir"
+        "--data_dir", type=str, default="/scratch/sm4511/TreeAlgorithms/data/"+args.jetType+"/Truth/", help="Data dir"
+    )
+
+    parser.add_argument(
+        "--output_dir", type=str, default="/scratch/sm4511/TreeAlgorithms/data/"+args.jetType+"/", help="Output dir"
     )
 
 
@@ -389,3 +517,9 @@ if __name__ == "__main__":
     if args.BSScan == "True":
         runBSO_Scan(int(args.id), int(args.N_jets))
         # runBSO_Scan(Nstart, Nend, N_jets)
+
+
+    """We ran a scan for 10 sets of 500 jets each. (Below as an example there is a scan for 4 sets of 2 jets each)"""
+    if args.KtAntiktCAscan == "True":
+        for alphaValue in [-1,0,1]:
+            runKtAntiKtCA_Scan(int(args.id), int(args.N_jets), alpha = alphaValue)
