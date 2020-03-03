@@ -20,7 +20,7 @@ logger = get_logger(level=logging.INFO)
 
 
 # data_dir="/scratch/sm4511/TreeAlgorithms/data/"
-data_dir="/Users/sebastianmacaluso/Documents/PrinceData/"
+root_dir="/Users/sebastianmacaluso/Documents/PrinceData/"
 
 
 
@@ -28,7 +28,7 @@ data_dir="/Users/sebastianmacaluso/Documents/PrinceData/"
 
 """####################################"""
 
-def appendJets(start, end, Njets, truth = False, BS = False, Greedy = False):
+def appendJets(start, end, Njets, truth = False, BS = False, Greedy = False, jetType = None):
     """ Load truth trees and create logLH lists """
 
     startTime = time.time()
@@ -41,23 +41,87 @@ def appendJets(start, end, Njets, truth = False, BS = False, Greedy = False):
     # Nconst = []
 
     TruthFilename = "Truth/tree_" + str(Njets) + "_truth_"
-    BSFilename = "GreedyJets/Greedy_" + str(Njets) + "Mw_"
-    greedyFilename = "BeamSearchJets/BSO_" + str(Njets) + "Mw_"
+    GreedyFilename = "GreedyJets/Greedy_" + str(Njets) + "_"
+    BSFilename = "BeamSearchJets/BSO_" + str(Njets) + "_"
 
+    if truth:
+        filename = TruthFilename
+    elif BS:
+        filename = BSFilename
+    elif Greedy:
+        filename = GreedyFilename
+    else:
+        raise ValuError(f" Please specify algorithm")
 
     for i in range(start, end):
-        if  ( os.path.isfile(TruthFilename+ str(i) + ".pkl")
-            and os.path.isfile(BSFilename+ str(i) + ".pkl")
-            and os.path.isfile(greedyFilename+ str(i) + ".pkl")):
+        if  ( os.path.isfile(root_dir+jetType+"/"+TruthFilename+ str(i) + ".pkl")
+            and os.path.isfile(root_dir+jetType+"/"+BSFilename+ str(i) + ".pkl")
+            and os.path.isfile(root_dir+jetType+"/"+GreedyFilename+ str(i) + ".pkl")):
 
-            with open(data_dir+"Truth/tree_" + str(Njets) + "_truth_" + str(i) + ".pkl", "rb") as fd:
+            with open(root_dir+jetType+"/"+filename+ str(i) + ".pkl", "rb") as fd:
+                jetsList, jetsListLogLH = pickle.load(fd, encoding='latin-1')
+
+
+            Total_jetsList.append(jetsList)
+            Total_jetsListLogLH.append(jetsListLogLH)
+
+            if (i + 1) % 20 == 0:
+                avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[i - 19:i + 1]).flatten()))
+
+    """ Standard deviation for the average log LH for the N runs"""
+    sigma = np.std(avg_logLH)
+
+    """ Statistical error for the mean log LH for the  total number of jets as err = sqrt(s)/ sqrt(N), where sigma s the sample variance"""
+    flatTotal_jetsListLogLH = np.asarray(Total_jetsListLogLH).flatten()
+    statSigma = np.std(flatTotal_jetsListLogLH) / np.sqrt(len(flatTotal_jetsListLogLH))
+
+    dic["jetsList"] = Total_jetsList
+    dic["jetsListLogLH"] = flatTotal_jetsListLogLH
+    dic["avgLogLH"] = np.asarray(avg_logLH)
+    dic["sigma"] = sigma
+    dic["statSigma"] = statSigma
+
+    logger.info(f" TOTAL TIME = {time.time() - startTime}")
+
+    return dic
+
+
+
+
+
+def appendTruthJets(start, end, Njets, truth = False, BS = False, Greedy = False, jetType = None):
+    """ Load truth trees and create logLH lists """
+
+    startTime = time.time()
+
+    dic = {}
+
+    Total_jetsList = []
+    Total_jetsListLogLH = []
+    avg_logLH = []
+    # Nconst = []
+
+    TruthFilename = "Truth/tree_" + str(Njets) + "_truth_"
+    GreedyFilename = "GreedyJets/Greedy_" + str(Njets) + "_"
+    BSFilename = "BeamSearchJets/BSO_" + str(Njets) + "_"
+
+    if truth:
+        filename = TruthFilename
+    elif BS:
+        filename = BSFilename
+    elif Greedy:
+        filename = GreedyFilename
+    else:
+        raise ValuError(f" Please specify algorithm")
+
+    for i in range(start, end):
+        if  ( os.path.isfile(root_dir+jetType+"/"+TruthFilename+ str(i) + ".pkl")
+            and os.path.isfile(root_dir+jetType+"/"+BSFilename+ str(i) + ".pkl")
+            and os.path.isfile(root_dir+jetType+"/"+GreedyFilename+ str(i) + ".pkl")):
+
+            with open(root_dir+jetType+"/"+filename+ str(i) + ".pkl", "rb") as fd:
                 jetsList = pickle.load(fd, encoding='latin-1')
 
-            # """Number of jet constituents"""
-            # Nconst.append([len(jet["leaves"]) for jet in jetsList])
-
-            # """Fill jet dictionaries with log likelihood of truth jet"""
-            # [likelihood.enrich_jet_logLH(jet, dij=True) for jet in jetsList]
 
             enrichTruthLogLH = [np.sum(jet["logLH"]) for jet in jetsList]
 
@@ -87,56 +151,57 @@ def appendJets(start, end, Njets, truth = False, BS = False, Greedy = False):
 
     return dic
 
+
 """ ################################### """
-def appendTruthJets(start, end, Njets):
-    """ Load truth trees and create logLH lists """
-
-    startTime = time.time()
-
-    dic = {}
-
-    Total_jetsList = []
-    Total_jetsListLogLH = []
-    avg_logLH = []
-    # Nconst = []
-
-    for i in range(start, end):
-        with open(data_dir+"Truth/tree_" + str(Njets) + "_truth_" + str(i) + ".pkl", "rb") as fd:
-            jetsList = pickle.load(fd, encoding='latin-1')
-
-        # """Number of jet constituents"""
-        # Nconst.append([len(jet["leaves"]) for jet in jetsList])
-
-        # """Fill jet dictionaries with log likelihood of truth jet"""
-        # [likelihood.enrich_jet_logLH(jet, dij=True) for jet in jetsList]
-
-        enrichTruthLogLH = [np.sum(jet["logLH"]) for jet in jetsList]
-
-        Total_jetsList.append(jetsList)
-        Total_jetsListLogLH.append(enrichTruthLogLH)
-
-        if (i+1)%20==0:
-            avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[i-19:i+1]).flatten()))
-
-    # print("lenght avg_logLH = ", len(avg_logLH))
-
-    """ Standard deviation for the average log LH for the N runs"""
-    sigma = np.std(avg_logLH)
-
-    """ Statistical error for the mean log LH for the  total number of jets as err = sqrt(s)/ sqrt(N), where  s is the sample variance"""
-    flatTotal_jetsListLogLH = np.asarray(Total_jetsListLogLH).flatten()
-    statSigma = np.std(flatTotal_jetsListLogLH) / np.sqrt(len(flatTotal_jetsListLogLH))
-
-    dic["jetsList"] = Total_jetsList
-    # dic["NconstList"] = np.asarray(Nconst)
-    dic["jetsListLogLH"] = flatTotal_jetsListLogLH
-    dic["avgLogLH"] = np.asarray(avg_logLH)
-    dic["sigma"] = sigma
-    dic["statSigma"] = statSigma
-
-    logger.info(f" TOTAL TIME = {time.time() - startTime}")
-
-    return dic
+# def appendTruthJets(start, end, Njets, data_dir):
+#     """ Load truth trees and create logLH lists """
+#
+#     startTime = time.time()
+#
+#     dic = {}
+#
+#     Total_jetsList = []
+#     Total_jetsListLogLH = []
+#     avg_logLH = []
+#     # Nconst = []
+#
+#     for i in range(start, end):
+#         with open(data_dir+"Truth/tree_" + str(Njets) + "_truth_" + str(i) + ".pkl", "rb") as fd:
+#             jetsList = pickle.load(fd, encoding='latin-1')
+#
+#         # """Number of jet constituents"""
+#         # Nconst.append([len(jet["leaves"]) for jet in jetsList])
+#
+#         # """Fill jet dictionaries with log likelihood of truth jet"""
+#         # [likelihood.enrich_jet_logLH(jet, dij=True) for jet in jetsList]
+#
+#         enrichTruthLogLH = [np.sum(jet["logLH"]) for jet in jetsList]
+#
+#         Total_jetsList.append(jetsList)
+#         Total_jetsListLogLH.append(enrichTruthLogLH)
+#
+#         if (i+1)%20==0:
+#             avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[i-19:i+1]).flatten()))
+#
+#     # print("lenght avg_logLH = ", len(avg_logLH))
+#
+#     """ Standard deviation for the average log LH for the N runs"""
+#     sigma = np.std(avg_logLH)
+#
+#     """ Statistical error for the mean log LH for the  total number of jets as err = sqrt(s)/ sqrt(N), where  s is the sample variance"""
+#     flatTotal_jetsListLogLH = np.asarray(Total_jetsListLogLH).flatten()
+#     statSigma = np.std(flatTotal_jetsListLogLH) / np.sqrt(len(flatTotal_jetsListLogLH))
+#
+#     dic["jetsList"] = Total_jetsList
+#     # dic["NconstList"] = np.asarray(Nconst)
+#     dic["jetsListLogLH"] = flatTotal_jetsListLogLH
+#     dic["avgLogLH"] = np.asarray(avg_logLH)
+#     dic["sigma"] = sigma
+#     dic["statSigma"] = statSigma
+#
+#     logger.info(f" TOTAL TIME = {time.time() - startTime}")
+#
+#     return dic
 
 
 
