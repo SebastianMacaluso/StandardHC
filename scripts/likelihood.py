@@ -151,7 +151,7 @@ def enrich_jet_logLH(jet, Lambda=None, delta_min=None, dij=False, alpha = None):
     root_id = jet["root_id"]
 
     if Lambda is None:
-        Lambda = jet.get("Lambda")
+        Lambda = float(jet.get("Lambda"))
         if Lambda is None:
             raise ValueError(f"No Lambda specified by the jet.")
     if delta_min is None:
@@ -200,15 +200,17 @@ def _get_jet_logLH(
         delta_L = jet["deltas"][idL]
         delta_R = jet["deltas"][idR]
 
-        # if M_Hard is not None and root_id == jet["root_id"]:
-        #
-        #     logLH.append(0)
-        #
-        #
-        # else:
+
+        # p_P =jet["content"][root_id]
+        # delta_L = get_delta_PC(p_P, pL)
+        # delta_R = get_delta_PC(p_P, pR)
+        # print(idL, idR,pL,pR,delta_L,delta_R,  delta_min, Lambda)
+
+
 
         llh, _ , _ , _ = split_logLH(pL, delta_L, pR, delta_R, delta_min, Lambda)
         logLH.append(llh)
+        # print('logLH = ', llh)
 
         if dij:
 
