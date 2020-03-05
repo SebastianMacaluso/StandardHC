@@ -416,6 +416,7 @@ def logLHMaxLevel(
 
 	""" Index of the left node to be removed """
 	left = [entry[1][0] for entry in NNpairs].index(leftIdx)
+	logger.debug(f" (lef,right) = {left,right}")
 	logger.debug(f" left idxs list = {[entry[1][0] for entry in NNpairs]}")
 
 	NNpairs.pop(left)
@@ -452,14 +453,14 @@ def logLHMaxLevel(
 
 	""" Find if any other node had one of the merged nodes as its NN """
 	NNidxUpdate = [i for i, entry in enumerate(NNpairs) if (entry[1][1] == leftIdx or entry[1][1] == rightIdx)]
-
+	logger.debug(f" NNpairs after pop = {NNpairs}")
 	if NNidxUpdate!=[]:
 
 		logger.debug(f" Indices that need to get the NN updated = {NNidxUpdate}")
 		logger.debug(f" First entry of NNpairs = {NNpairs[0]}")
 
 		if NNidxUpdate[0]==0:
-			""" Do not update the 1st entry NN, but set the logLH = - Infinity"""
+			""" Do not update the 1st entry NN, but set the logLH = - Infinity. All the pairings of the 1st element of the list are taken into account by the elements to the right"""
 			NNpairs[NNidxUpdate[0]] = (-np.inf, NNpairs[NNidxUpdate[0]][1])
 			NNidxUpdate = NNidxUpdate[1::]
 
@@ -486,29 +487,37 @@ def logLHMaxLevel(
 
 		for i,entry in enumerate(NNidxUpdate):
 			NNpairs[entry] = NNpairsUpdate[i]
+			logger.debug(f" i,entry = {i,entry}")
+			logger.debug(f" NNpairs after updating = {NNpairs}")
 
 
+	logger.debug(f"-----"*5)
+	logger.debug(f" idx = {idx}")
+	logger.debug(f" levelContent = {levelContent}")
 
 	""" Find merged node NN and append to list """
-	NewNodeNN = max(
-		[
-			(
-				likelihood.split_logLH(
-					newNode,
-					newDelta,
-					levelContent[j],
-					levelDeltas[j],
-					delta_min,
-					lam
-				),
-				[Nparent, idx[j]]
-			)
-			for j in range(len(levelContent))
-		],
-		key=lambda x: x[0]
-	)
+	if len(levelContent)>1:
+		NewNodeNN = max(
+			[
+				(
+					likelihood.split_logLH(
+						newNode,
+						newDelta,
+						levelContent[j],
+						levelDeltas[j],
+						delta_min,
+						lam
+					),
+					[Nparent, idx[j]]
+				)
+				for j in range(len(levelContent)-1)
+			],
+			key=lambda x: x[0]
+		)
 
-	NNpairs.append(NewNodeNN)
+		NNpairs.append(NewNodeNN)
+
+		logger.debug(f" NNpairs after adding merged node = {NNpairs}")
 
 
 

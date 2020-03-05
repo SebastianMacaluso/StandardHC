@@ -482,25 +482,26 @@ def logLHMaxLevel(
 
 
 	""" Find merged node NN and append to list """
-	NewNodeNN = max(
-		[
-			(
-				likelihood.Basic_split_logLH(
-					newNode,
-					newDelta,
-					levelContent[j],
-					levelDeltas[j],
-					delta_min,
-					lam
-				),
-				[Nparent, idx[j]]
-			)
-			for j in range(len(levelContent))
-		],
-		key=lambda x: x[0]
-	)
+	if len(levelContent) > 1:
+		NewNodeNN = max(
+			[
+				(
+					likelihood.Basic_split_logLH(
+						newNode,
+						newDelta,
+						levelContent[j],
+						levelDeltas[j],
+						delta_min,
+						lam
+					),
+					[Nparent, idx[j]]
+				)
+				for j in range(len(levelContent)-1)
+			],
+			key=lambda x: x[0]
+		)
 
-	NNpairs.append(NewNodeNN)
+		NNpairs.append(NewNodeNN)
 
 
 
