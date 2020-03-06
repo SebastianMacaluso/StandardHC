@@ -7,7 +7,7 @@ import time
 import copy
 
 from scripts import likelihood_invM as likelihood
-from scripts import auxFunctions
+from scripts import auxFunctions_invM as auxFunctions
 
 from scripts.utils import get_logger
 
@@ -116,7 +116,6 @@ def recluster(
 		lamRoot = float(input_jet["LambdaRoot"]),
 	)
 
-
 	jet = {}
 
 	""" Extra features needed for visualizations """
@@ -138,7 +137,7 @@ def recluster(
 
 	jet["root_id"] = root_node
 	jet["tree"] = np.asarray(tree).reshape(-1, 2)
-	jet["content"] = np.asarray(jetContent).reshape(-1, 2)
+	jet["content"] = np.asarray(jetContent).reshape(-1, 4)
 	jet["linkage_list"]=linkage_list
 	jet["Nconst"]=Nconst
 	jet["algorithm"]= "greedyLH"
@@ -160,8 +159,6 @@ def recluster(
 	jet["ConstPhi"] = ConstPhi
 	jet["PhiDelta"] = PhiDelta
 	jet["PhiDeltaRel"] = PhiDeltaListRel
-
-
 
 	logger.debug(f" Recluster and build tree algorithm total time = {time.time()  - start_time}")
 
@@ -448,7 +445,7 @@ def logLHMaxLevel(
 	jetTree.append([leftIdx, rightIdx])
 
 	logLH.append(maxPairLogLH)
-
+	logger.debug(f" Per level logLH  = {logLH}")
 
 
 	""" Find if any other node had one of the merged nodes as its NN """

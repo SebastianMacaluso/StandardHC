@@ -162,7 +162,7 @@ def recluster(
 		jet = {}
 		jet["root_id"] = root_node
 		jet["tree"] = np.asarray(path.jetTree).reshape(-1, 2)
-		jet["content"] = np.asarray(path.jetContent).reshape(-1, 2)
+		jet["content"] = np.asarray(path.jetContent).reshape(-1, 4)
 		jet["linkage_list"]=path.linkage_list
 		jet["Nconst"]=len(jet_const)
 		jet["algorithm"]= "beamSearch"
@@ -190,7 +190,7 @@ def recluster(
 			jet["root_id"] = 0
 			jet["node_id"] = node_id
 			jet["tree"] = np.asarray(tree).reshape(-1, 2)
-			jet["content"] = np.asarray(content).reshape(-1, 2)
+			jet["content"] = np.asarray(content).reshape(-1, 4)
 			jet["tree_ancestors"] = tree_ancestors
 
 		""" Fill deltas list (needed to fill the jet log LH)"""
