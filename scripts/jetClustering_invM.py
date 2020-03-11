@@ -20,13 +20,121 @@ logger = get_logger(level=logging.INFO)
 
 
 # data_dir="/scratch/sm4511/TreeAlgorithms/data/"
-root_dir="/Users/sebastianmacaluso/Documents/PrinceData/"
+root_dir="/Users/sebastianmacaluso/Documents/PrinceData/invMassGinkgo/"
 
 
 
 
 
 """####################################"""
+
+def logLHCut(in_truth_Dic, in_Greedy_Dic, in_BSO_Dic, NleavesMin=2, NleavesMax=np.inf):
+
+    # dic = {}
+    # Total_jetsListLogLH = []
+    # avg_logLH = []
+    # jetsList = []
+
+    truthDic = copy.copy(in_truth_Dic)
+    GreedyDic = copy.copy(in_Greedy_Dic)
+    BSODic = copy.copy(in_BSO_Dic)
+
+    tot_truthJets = []
+    tot_GreedyJets = []
+    tot_BSJets = []
+
+    # GreedyListLogLH = []
+    # BSListLogLH = []
+    # TruthlogLH = []
+
+    # M_hard = truthDic["jetsList"][0][0]["M_Hard"]
+    # print("M_hard = ",M_hard)
+
+    NGreedyFail = 0
+    NBSFail = 0
+
+    for k in range(len(truthDic["jetsList"])):
+        truthJets = []
+        GreedyJets = []
+        BSJets = []
+
+        # NewJetList = [likelihood.enrich_jet_logLH(jet) for jet in truthDic["jetsList"][k]]
+
+        for i_jet in range(len(truthDic["jetsList"][k])):
+
+            # tempLogLHTruth = np.sum(NewJetList[i_jet]["logLH"])
+            tempLogLHTruth = np.sum(truthDic["jetsList"][k][i_jet]["logLH"])
+            tempLogLHGreedy = np.sum(GreedyDic["jetsList"][k][i_jet]["logLH"])
+            tempLogLHBS = np.sum(BSODic["jetsList"][k][i_jet]["logLH"])
+
+            if tempLogLHGreedy == - np.inf: NGreedyFail+=1
+            if tempLogLHBS == - np.inf: NBSFail+=1
+
+            root_id = truthDic["jetsList"][k][i_jet]["root_id"]
+
+            if ( truthDic["jetsList"][k][i_jet]["tree"][root_id][0]!=-1 and
+                    tempLogLHGreedy != - np.inf
+                    and tempLogLHBS != - np.inf
+                    # and (M_Hard / 2 - Width < truthDic["jetsList"][k][i_jet]["deltas"][0] < M_Hard / 2 + Width)
+                    # and (M_Hard / 2 - Width < GreedyDic["jetsList"][k][i_jet]["deltas"][0] < M_Hard / 2 + Width)
+                    # and (M_Hard / 2 - Width < BSODic["jetsList"][k][i_jet]["deltas"][0] < M_Hard / 2 + Width)
+                    and (NleavesMin <= len(truthDic["jetsList"][k][i_jet]["leaves"]) <= NleavesMax)
+            ):
+
+                truthDic["jetsList"][k][i_jet]["sumlogLH"] = tempLogLHTruth
+                GreedyDic["jetsList"][k][i_jet]["sumlogLH"] = tempLogLHGreedy
+                BSODic["jetsList"][k][i_jet]["sumlogLH"] = tempLogLHBS
+
+
+                # TruthlogLH += tempLogLHTruth
+                # GreedyListLogLH += tempLogLHGreedy
+                # BSListLogLH += tempLogLHBS
+
+
+                # if tempLogLHGreedy == - np.inf:
+                #     print("Jet # ",i_jet," in set ",k," not allowed in our model - likelihood = 0")
+                #     print(" GreedyDic['jetsList'][",k,"][",i_jet,"]['logLH'] = ", GreedyDic['jetsList'][k][i_jet]['logLH'])
+                #
+                # if tempLogLHBS == - np.inf:
+                #     print("Jet # ",i_jet," in set ",k," not allowed in our model - likelihood = 0")
+                #     print(" BSDic['jetsList'][",k,"][",i_jet,"]['logLH'] = ", GreedyDic['jetsList'][k][i_jet]['logLH'])
+
+                truthJets.append(truthDic["jetsList"][k][i_jet])
+                GreedyJets.append(GreedyDic["jetsList"][k][i_jet])
+                BSJets.append(BSODic['jetsList'][k][i_jet])
+        #
+        # if (k+1)%jetsperSet==0:
+        #     avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[k-(jetsperSet-1):k+1]).flatten()))
+
+
+        tot_truthJets.append(truthJets)
+        tot_GreedyJets.append(GreedyJets)
+        tot_BSJets.append(BSJets)
+
+    # """ Standard deviation for the average log LH for the N runs"""
+    # sigma = np.std(avg_logLH)
+    #
+    #
+    # """ Statistical error for the mean log LH for the  total number of jets as err = sqrt(s)/ sqrt(N), where sigma s the sample variance"""
+    # statSigma = np.std(Total_jetsListLogLH) / np.sqrt(len(Total_jetsListLogLH))
+    #
+    # dic["jetsList"] = np.asarray(jetsList)
+    # dic["jetsListLogLH"] = Total_jetsListLogLH
+    # dic["avgLogLH"] = np.asarray(avg_logLH)
+    # dic["sigma"] = sigma
+    # dic["statSigma"] = statSigma
+
+
+    truthDic["jetsList"] = tot_truthJets
+    GreedyDic["jetsList"] = tot_GreedyJets
+    BSODic["jetsList"] = tot_BSJets
+
+    return truthDic, GreedyDic, BSODic, NGreedyFail, NBSFail
+
+
+
+
+
 
 def appendJets(start, end, Njets, truth = False, BS = False, Greedy = False, jetType = None):
     """ Load truth trees and create logLH lists """
@@ -63,25 +171,25 @@ def appendJets(start, end, Njets, truth = False, BS = False, Greedy = False, jet
 
 
             Total_jetsList.append(jetsList)
-            Total_jetsListLogLH.append(jetsListLogLH)
-
-            if (i + 1) % 20 == 0:
-                avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[i - 19:i + 1]).flatten()))
-
-    """ Standard deviation for the average log LH for the N runs"""
-    sigma = np.std(avg_logLH)
-
-    """ Statistical error for the mean log LH for the  total number of jets as err = sqrt(s)/ sqrt(N), where sigma s the sample variance"""
-    flatTotal_jetsListLogLH = np.asarray(Total_jetsListLogLH).flatten()
-    statSigma = np.std(flatTotal_jetsListLogLH) / np.sqrt(len(flatTotal_jetsListLogLH))
+    #         Total_jetsListLogLH.append(jetsListLogLH)
+    #
+    #         if (i + 1) % 20 == 0:
+    #             avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[i - 19:i + 1]).flatten()))
+    #
+    # """ Standard deviation for the average log LH for the N runs"""
+    # sigma = np.std(avg_logLH)
+    #
+    # """ Statistical error for the mean log LH for the  total number of jets as err = sqrt(s)/ sqrt(N), where sigma s the sample variance"""
+    # flatTotal_jetsListLogLH = np.asarray(Total_jetsListLogLH).flatten()
+    # statSigma = np.std(flatTotal_jetsListLogLH) / np.sqrt(len(flatTotal_jetsListLogLH))
 
     dic["jetsList"] = Total_jetsList
-    dic["jetsListLogLH"] = flatTotal_jetsListLogLH
-    dic["avgLogLH"] = np.asarray(avg_logLH)
-    dic["sigma"] = sigma
-    dic["statSigma"] = statSigma
-
-    logger.info(f" TOTAL TIME = {time.time() - startTime}")
+    # dic["jetsListLogLH"] = flatTotal_jetsListLogLH
+    # dic["avgLogLH"] = np.asarray(avg_logLH)
+    # dic["sigma"] = sigma
+    # dic["statSigma"] = statSigma
+    #
+    # logger.info(f" TOTAL TIME = {time.time() - startTime}")
 
     return dic
 

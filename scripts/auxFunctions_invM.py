@@ -221,8 +221,9 @@ def jetsLogLH(start, end, Dic, jetsperSet, rerunLH= False):
 
         Total_jetsListLogLH+=jetsListLogLH
 
-        if (k+1)%jetsperSet==0:
-            avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[k-(jetsperSet-1):k+1]).flatten()))
+        if len(Total_jetsListLogLH)%jetsperSet==0:
+            # print("jey")
+            avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[(k)*(jetsperSet):(k+1)*(jetsperSet)]).flatten()))
         # if (k+1)%50==0:
         #     avg_logLH.append(np.average(np.asarray(Total_jetsListLogLH[k-49:k+1]).flatten()))
 
