@@ -24,8 +24,9 @@ def draw_truth(in_jet):
 	Args:
 	- input jet dictionary.
 	"""
+	root_id = in_jet["root_id"]
 
-	runTraverse_jet(in_jet, draw_tree=True)
+	runTraverse_jet(in_jet, node_id = root_id, draw_tree=True)
 
 	outers_node_id = in_jet["outers_node_id"]
 

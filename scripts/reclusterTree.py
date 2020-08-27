@@ -10,7 +10,7 @@ logger = get_logger(level=logging.INFO)
 
 
 
-def recluster(input_jet, alpha=None, save=True):
+def recluster(input_jet, alpha=None, save=True, out_dir = None):
   """
   Uses helper functions to get the leaves of an  input jet, recluster them following some algorithm determined by the value of alpha,
    create the new tree for the chosen algorithm, make a jet dictionary and save it.
@@ -107,12 +107,19 @@ def recluster(input_jet, alpha=None, save=True):
   jet["node_id"]=node_id
   jet["tree_ancestors"]=tree_ancestors
   jet["Nconst"]=Nconst
-  jet["algorithm"]=alpha
+
+  if alpha==1:
+    jet["algorithm"]="Kt"
+  elif alpha == -1:
+    jet["algorithm"] = "Anti-kt"
+  elif alpha == 0:
+    jet["algorithm"] = "CA"
 
 
   # Save reclustered tree
   if save:
-    out_dir = "data/"
+    if not out_dir:
+        out_dir = "data/"
     # print("input_jet[name]=",input_jet["name"])
 
     algo = str(input_jet["name"]) + '_' + str(alpha)
@@ -257,24 +264,34 @@ def dijMinPair(
 
 
     # Get all dij at current level: dij=min(pTi^(2\alpha),pTj^(2\alpha)) * [arccos((pi.pj)/|pi|*|pj|)]^2
-    epsilon=1e-6 #For numerical stability
+    tempCos = [np.dot(const_list[pairs][k][0],const_list[pairs][k][1])/
+                            (np.linalg.norm(const_list[pairs][k][0]) * np.linalg.norm(const_list[pairs][k][1]))
+               for k in range(len(const_list[pairs]))]
+
+    tempPhi = np.arccos([entry if abs(entry)<=1 else np.sign(entry) for entry in tempCos])
+
     dij_list = [(np.sort((const_list_pt[pairs][k]) ** (2 * alpha))[0] * \
-                 (np.arccos(np.dot(const_list[pairs][k][0],const_list[pairs][k][1])/
-                            (epsilon + np.linalg.norm(const_list[pairs][k][0]) * np.linalg.norm(const_list[pairs][k][1]))\
-                            )) ** 2, k)\
+                 (tempPhi[k]) ** 2, k)\
                 for k in range(len(const_list[pairs]))]
+
+    # epsilon=1e-6 #For numerical stability
+    # dij_list = [(np.sort((const_list_pt[pairs][k]) ** (2 * alpha))[0] * \
+    #              (np.arccos(np.dot(const_list[pairs][k][0],const_list[pairs][k][1])/
+    #                         (epsilon + np.linalg.norm(const_list[pairs][k][0]) * np.linalg.norm(const_list[pairs][k][1]))\
+    #                         )) ** 2, k)\
+    #             for k in range(len(const_list[pairs]))]
 
     logger.debug(f"dij_list = {dij_list}")
 
-    cos_arg=(np.sum([np.count_nonzero(np.absolute(np.sum(const_list[pairs][k][0] * const_list[pairs][k][1]) /
-                            (np.sqrt(np.sum(const_list[pairs][k][0] ** 2)) * np.sqrt(
-                              np.sum(const_list[pairs][k][1] ** 2))))> 1) for k in range(len(const_list[pairs]))]))
-    logger.debug(f"Cos arg > 1? = {cos_arg}")
+    # cos_arg=(np.sum([np.count_nonzero(np.absolute(np.sum(const_list[pairs][k][0] * const_list[pairs][k][1]) /
+    #                         (np.sqrt(np.sum(const_list[pairs][k][0] ** 2)) * np.sqrt(
+    #                           np.sum(const_list[pairs][k][1] ** 2))))> 1) for k in range(len(const_list[pairs]))]))
+    # logger.debug(f"Cos arg > 1? = {cos_arg}")
 
-    cosines=[np.absolute(np.sum(const_list[pairs][k][0] * const_list[pairs][k][1]) /
-                            (np.sqrt(np.sum(const_list[pairs][k][0] ** 2)) * np.sqrt(
-                              np.sum(const_list[pairs][k][1] ** 2)))) for k in range(len(const_list[pairs]))]
-    logger.debug(f"pos,value = {[(i,cosines[i]) for i in range(len(cosines)) if np.absolute(cosines[i])<0.99]}")
+    # cosines=[np.absolute(np.sum(const_list[pairs][k][0] * const_list[pairs][k][1]) /
+    #                         (np.sqrt(np.sum(const_list[pairs][k][0] ** 2)) * np.sqrt(
+    #                           np.sum(const_list[pairs][k][1] ** 2)))) for k in range(len(const_list[pairs]))]
+    # logger.debug(f"pos,value = {[(i,cosines[i]) for i in range(len(cosines)) if np.absolute(cosines[i])<0.99]}")
 
 
 
@@ -292,7 +309,8 @@ def dijMinPair(
     # List with all the previous min{d_ij}
     var_dij_history.append(dij_list[min_pair])
 
-    linkage_list.append([idx[pairs[min_pair][0]], idx[pairs[min_pair][1]], min_tuple[0], N_leaves_list[-1]])
+    linkage_list.append([idx[pairs[min_pair][0]], idx[pairs[min_pair][1]], Nparent, N_leaves_list[-1]])
+    # linkage_list.append([idx[pairs[min_pair][0]], idx[pairs[min_pair][1]], min_tuple[0], N_leaves_list[-1]])
 
 
     logger.debug(f"------------------------------------------------------------")
