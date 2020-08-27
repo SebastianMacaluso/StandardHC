@@ -451,7 +451,7 @@ def fill_GreedyList(input_jets, Nbest=1, k1=0, k2=2):
 
 
 
-    with open(args.data_dir + str(input_jets) + '.pkl', "rb") as fd:
+    with open(data_dir + str(input_jets) + '.pkl', "rb") as fd:
         truth_jets = pickle.load(fd, encoding='latin-1')[k1:k2]
 
     startTime = time.time()
@@ -492,7 +492,7 @@ def fill_BSList(input_jets, Nbest=1, k1=0, k2=2):
 
 
 
-    with open(args.data_dir + str(input_jets) + '.pkl', "rb") as fd:
+    with open(data_dir + str(input_jets) + '.pkl', "rb") as fd:
         truth_jets = pickle.load(fd, encoding='latin-1')[k1:k2]
 
     startTime = time.time()
@@ -536,7 +536,7 @@ def fill_ktAlgos(input_jets, k1=0, k2=2, alpha = None):
 
 
 
-    with open(args.data_dir + str(input_jets) + '.pkl', "rb") as fd:
+    with open(data_dir + str(input_jets) + '.pkl', "rb") as fd:
         truth_jets = pickle.load(fd, encoding='latin-1')[k1:k2]
 
     startTime = time.time()
