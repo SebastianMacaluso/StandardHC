@@ -442,7 +442,7 @@ def appendBSO_Scan(start, end, Njets):
 
 """ RUN GREEDY AND BEAM SEARCH ALGORITHMS """
 
-def fill_GreedyList(input_jets, Nbest=1, k1=0, k2=2):
+def fill_GreedyList(input_jets, Nbest=1, k1=0, k2=2, data_dir='data/truth/'):
     """ Run the greedy algorithm over a list of sets of input jets.
         Args: input jets
         returns: clustered jets
@@ -483,7 +483,7 @@ def fill_GreedyList(input_jets, Nbest=1, k1=0, k2=2):
     return greedyJets, greedyJetsLogLH
 
 
-def fill_BSList(input_jets, Nbest=1, k1=0, k2=2):
+def fill_BSList(input_jets, Nbest=1, k1=0, k2=2, data_dir='data/truth/'):
     """ Run the Beam search algorithm (algorithm where when the logLH of 2 or more trees is the same, we only keep one of them) over a list  of sets of input jets.
         Args: input jets
         returns: clustered jets
@@ -527,7 +527,7 @@ def fill_BSList(input_jets, Nbest=1, k1=0, k2=2):
 
 
 
-def fill_ktAlgos(input_jets, k1=0, k2=2, alpha = None):
+def fill_ktAlgos(input_jets, k1=0, k2=2, alpha = None, data_dir='data/truth/'):
     """ Run the generalized kt algorithm over a list of sets of input jets.
         Args: input jets
         returns: clustered jets
