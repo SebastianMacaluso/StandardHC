@@ -20,9 +20,9 @@ from matplotlib.patches import Ellipse
 from matplotlib import gridspec
 
 
-from scripts import likelihood
+# from . import likelihood
 
-from scripts.utils import get_logger
+from .utils import get_logger
 
 logger = get_logger(level=logging.INFO)
 
