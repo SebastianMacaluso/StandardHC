@@ -173,25 +173,27 @@ def recluster(
 		jet["logLH"] = np.asarray(path.logLH)
 
 
+		tree, \
+		content, \
+		node_id, \
+		tree_ancestors = N2Greedy._traverse(
+			root_node,
+			path.jetContent,
+			jetTree=path.jetTree,
+			Nleaves=len(jet_const),
+		)
+
+		jet["root_id"] = 0
+		jet["node_id"] = node_id
+		jet["tree"] = np.asarray(tree).reshape(-1, 2)
+		jet["content"] = np.asarray(content).reshape(-1, 4)
 
 		""" Extra features needed for visualizations """
 		if visualize:
-
-			tree, \
-			content, \
-			node_id, \
-			tree_ancestors = N2Greedy._traverse(
-				root_node,
-				path.jetContent,
-				jetTree=path.jetTree,
-				Nleaves=len(jet_const),
-			)
-
-			jet["root_id"] = 0
-			jet["node_id"] = node_id
-			jet["tree"] = np.asarray(tree).reshape(-1, 2)
-			jet["content"] = np.asarray(content).reshape(-1, 4)
 			jet["tree_ancestors"] = tree_ancestors
+
+
+		# logger.info("BS jet = %s", jet)
 
 		""" Fill deltas list (needed to fill the jet log LH)"""
 		jet = likelihood.fill_jet_info(jet, parent_id=None)

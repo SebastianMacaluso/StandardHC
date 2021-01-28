@@ -91,7 +91,13 @@ def _get_jet_info(jet, root_id=None, parent_id=None, deltas=None, draws=None):
         pR = jet["content"][idR]
         delta = get_delta_LR(pL, pR)
         if parent_id is not None:
+            # print("Parent id = ", parent_id)
+            # print("Len deltas = ",len(deltas))
+            # pP = jet["content"][parent_id]
+            # delta_parent2 = pP[0] ** 2 - np.linalg.norm(pP[1::]) ** 2
             delta_parent = deltas[parent_id]
+            # print("DP 1 = ",delta_parent)
+            # print("DP 2 = ", delta_parent2)
             r = torch.tensor(delta / delta_parent)
         else:
             r = None

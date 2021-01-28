@@ -7,13 +7,13 @@ import copy
 import argparse
 import os
 
-from scripts import reclusterTree
-from scripts import linkageList
-from scripts import heatClustermap
-from scripts import likelihood
-from scripts import N2Greedy
-from scripts import beamSearchOptimal as BSO
-from scripts.utils import get_logger
+from . import reclusterTree
+from . import linkageList
+from . import heatClustermap
+from . import likelihood
+from . import N2Greedy
+from . import beamSearchOptimal as BSO
+from .utils import get_logger
 
 logger = get_logger(level=logging.INFO)
 
